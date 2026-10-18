@@ -1,0 +1,29 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.logs
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# SpringBoot
+spring-boot-starter/
+HELP.md
+
+# IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VSCode
+.vscode/
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 本地配置，防止数据库密码提交
+application-local.yml
+application-local.properties
