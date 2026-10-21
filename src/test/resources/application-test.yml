@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:library_test;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema-h2.sql
+library:
+  # 这些只是测试用虚拟密码，无真实人员/团队密码。
+  admin-account: testadmin
+  admin-password: TestAdmin-Only#2026
+  default-borrow-days: 30
+  overdue-freeze-days: 35
+  renewal-days: 15
+logging:
+  file:
+    name: target/test-logs/library.log
