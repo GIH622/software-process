@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>图书借阅归还登记系统 · 软件过程实验</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div class="top"><div class="seal">书</div><div><div class="small">LIBRARY DESK · COURSE LAB</div><h1>图书借阅归还登记系统</h1><p>让每一次借阅，都有据可查。</p></div><span id="session" class="session">尚未登录</span></div></header>
+<main>
+<section class="panel" id="loginPanel"><div class="eyebrow">01 / 身份验证</div><h2>开始工作</h2><p>请输入演示读者证号或管理员账号。登录后可使用馆藏检索、借阅、归还及相应管理功能。</p>
+<form id="loginForm"><label>账号 <input id="loginAccount" required autocomplete="username" placeholder="如 1001"></label>
+<label>密码 <input id="loginPassword" required type="password" autocomplete="current-password" placeholder="输入本机配置的测试密码"></label>
+<button type="submit">登录系统</button></form></section>
+<div id="work" hidden>
+<div class="toolbar"><div><span id="who" class="pill"></span><p class="micro">所有写入操作均经过后端事务与权限校验。</p></div><button class="secondary" id="logout">退出登录</button></div>
+<section class="panel"><div class="eyebrow">02 / 馆藏检索 · R004</div><h2>馆藏图书</h2>
+<form id="searchForm" class="inline"><input id="keyword" placeholder="书名、作者、ISBN，例如 三体"><button>搜索馆藏</button></form><div id="bookResults" class="results"></div></section>
+<div class="two">
+<section class="panel"><div class="eyebrow">03 / 借阅业务 · R001</div><h2>登记借阅</h2><form id="borrowForm">
+<label>读者证号 <input id="borrowReader" placeholder="如 1001" required></label>
+<label>唯一图书条码 <input id="borrowBarcode" placeholder="如 BC-0001" required></label>
+<button>确认借阅</button></form><p class="micro">借阅期限默认30天。最多同时借阅5本，具体以读者配置为准。</p></section>
+<section class="panel"><div class="eyebrow">04 / 归还业务 · R002</div><h2>办理归还</h2><form id="returnForm">
+<label>唯一图书条码 <input id="returnBarcode" placeholder="如 BC-0001" required></label>
+<button>确认归还</button></form><p class="micro">按实体副本条码归还；系统自动计算逾期天数，本版本不收取罚金。</p></section>
+</div>
+<section class="panel" id="myPanel"><div class="eyebrow">05 / 我的借阅</div><h2>借阅记录</h2><button class="secondary" id="myRefresh">刷新借阅列表</button><div id="myLoans" class="results"></div></section>
+<section class="panel" id="adminPanel" hidden><div class="eyebrow">06 / 管理员 · R005 / R006 / R007</div><h2>管理台</h2>
+<div class="two">
+<form id="addBookForm"><h3>入库一本实体书</h3><label>条码<input name="barcode" required placeholder="BC-NEW-001"></label>
+<label>ISBN<input name="isbn" required placeholder="9787536692930"></label>
+<label>书名<input name="title" required></label><label>作者<input name="author"></label>
+<label>分类<input name="category"></label><label>位置<input name="location"></label><button>新增图书</button></form>
+<form id="addReaderForm"><h3>注册读者</h3><label>证号<input name="cardNo" required placeholder="4-12位数字"></label>
+<label>姓名<input name="name" required></label><label>密码<input name="password" type="password" required minlength="8"></label>
+<label>最大借阅量<input name="borrowLimit" type="number" min="1" max="50" value="5" required></label><button>新增读者</button></form>
+</div><div class="inline"><button class="secondary" id="overdueBtn">查看逾期名单</button>
+<button class="secondary" id="logsBtn">查看最近操作日志</button>
+<a class="download" href="/api/admin/borrow-records/export" id="exportBtn">导出 CSV</a></div>
+<div id="adminResults" class="results"></div></section>
+</div>
+<section class="notice" role="status" id="message" aria-live="polite">本页面仅为课程演示。正式测试请保留 Postman 与 MySQL 执行证据。</section>
+</main><footer>SOFTWARE PROCESS LAB · Transaction first, evidence always.</footer>
+<script src="/app.js" defer></script></body></html>
