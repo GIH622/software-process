@@ -1,0 +1,51 @@
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: strict
+        # 本地 localhost/HTTP 演示时 false；部署到 HTTPS 必须改为 true。
+        secure: ${SESSION_COOKIE_SECURE:false}
+spring:
+  application:
+    name: library-process-dev
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/library_dev?serverTimezone=Asia%2FShanghai&useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:library_app}
+    # 不要把队友或本机真实密码写入文件。
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 10000
+  sql:
+    init:
+      mode: never # 建表只能按 sql/ 中的显式步骤手动执行。
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+library:
+  admin-account: ${LIBRARY_ADMIN_ACCOUNT:admin}
+  admin-password: ${LIBRARY_ADMIN_PASSWORD:}
+  demo-reader-password: ${LIBRARY_DEMO_READER_PASSWORD:}
+  default-borrow-days: 30
+  # 团队最新需求分析暂定 >35 天冻结；SRS 残留 >30 天处待评审修订。
+  overdue-freeze-days: 35
+  # 对接上传的library_db.sql：老读者MD5登录成功后升级为BCrypt。迁移完成可改false。
+  legacy-md5-login-enabled: ${LIBRARY_LEGACY_MD5_LOGIN_ENABLED:true}
+  # 共享库禁止静默改写队友密码哈希；只在单独确认和备份后可主动开启升级。
+  legacy-md5-upgrade-enabled: ${LIBRARY_LEGACY_MD5_UPGRADE_ENABLED:false}
+  # 上传SQL的CR变更单状态为已批准但尚无实施/验收记录，默认禁止续借。
+  renewal-enabled: ${LIBRARY_RENEWAL_ENABLED:false}
+  # 续借变更分析已写 15 天，功能默认关闭，审批+迁移+回归后才启用。
+  renewal-days: 15
+  max-renewals: 1
+  zone-id: Asia/Shanghai
+logging:
+  file:
+    name: logs/library.log
+  level:
+    root: INFO
+    edu.course.library: INFO

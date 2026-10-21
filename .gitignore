@@ -1,0 +1,19 @@
+# 构建文件、编辑器缓存和本地秘密不得入库
+/target/
+/.idea/
+/.vscode/
+*.iml
+.DS_Store
+*.log
+/logs/
+/backups/
+.env
+.env.*
+!.env.example
+*.local.yml
+*.local.yaml
+/postman/*local*.postman_environment.json
+/reports/private/
+
+# 原始数据库快照保留在交付ZIP，但默认不上传GitHub
+/references/library_db.sql
