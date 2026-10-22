@@ -133,8 +133,8 @@ public class BorrowService {
         if(loans.markReturned(loan.id(),now,days)!=1)throw new IllegalStateException("更新归还记录失败");
         if(books.markAvailable(book.id())!=1)throw new IllegalStateException("释放副本失败");
         if(readers.changeBorrowedCount(reader.id(),-1)!=1)throw new IllegalStateException("递减读者计数失败");
-        // 状态依据“剩余未归还记录”重新计算：无欠还自动恢复；人工冻结则不自动解除。
-        String status=overdue.recomputeUnderLock(reader);
+        // 状态按“本次逾期 + 剩余未归还记录”重新计算：无欠还自动恢复；人工冻结则不自动解除。
+        String status=overdue.recomputeUnderLock(reader,days);
         probe.afterReturnWrites();
         logs.insert("RETURN",actorCard,reader.id(),book.isbn(),"R002 归还，barcode="+barcode+"，逾期"+days+"天");
         return new Forms.Receipt(loan.id(),reader.cardNo(),barcode,book.title(),"RETURNED",

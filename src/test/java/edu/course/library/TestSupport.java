@@ -34,7 +34,7 @@ public class TestSupport {
         jdbc.update("DELETE FROM borrow_record");
         jdbc.update("DELETE FROM book_inventory");
         jdbc.update("DELETE FROM reader_account");
-        for(int i=1;i<=3;i++)jdbc.update("INSERT INTO reader_account(card_no,name,password_md5,status,borrowed_count,borrow_limit,register_date) "+
+        for(int i=1;i<=3;i++)jdbc.update("INSERT INTO reader_account(card_no,name,password_hash,status,borrowed_count,borrow_limit,register_date) "+
             "VALUES(?,?,?,'NORMAL',0,?,?)",
             ""+(1000+i),"测试读者"+i,encoder.encode("Reader-Test#2026"),i==1?5:1,
             java.sql.Date.valueOf("2026-10-01"));

@@ -11,8 +11,6 @@ public class LibrarySettings {
     @Value("${library.admin-account:admin}") public String adminAccount;
     @Value("${library.admin-password:}") public String adminPassword;
     @Value("${library.demo-reader-password:}") public String demoReaderPassword;
-    @Value("${library.legacy-md5-login-enabled:true}") public boolean legacyMd5LoginEnabled;
-    @Value("${library.legacy-md5-upgrade-enabled:false}") public boolean legacyMd5UpgradeEnabled;
     @Value("${library.renewal-enabled:false}") public boolean renewalEnabled;
     @Value("${library.renewal-days:15}") public int renewalDays;
     @Value("${library.max-renewals:1}") public int maxRenewals;

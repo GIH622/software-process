@@ -81,20 +81,6 @@ class ApiControllerTest {
             .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isBadRequest());
     }
-    @Test void tc029_legacyMd5LoginDoesNotSilentlyModifySharedPassword() throws Exception {
-        // 旧库字段兼容性检查：测试库使用自造的测试值，默认不会在登录时修改旧哈希。
-        // 只使用虚构测试密码，模拟导出库中的旧 MD5 列；成功登录也不会在默认配置下改写旧值。
-        String raw = "Legacy-TestOnly#2026";
-        byte[] digest = java.security.MessageDigest.getInstance("MD5")
-            .digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        String legacy=java.util.HexFormat.of().formatHex(digest);
-        jdbc.update("UPDATE reader_account SET password_md5=? WHERE card_no='1001'",legacy);
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-            .content("{\"account\":\"1001\",\"password\":\"Legacy-TestOnly#2026\"}"))
-            .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(legacy,
-            jdbc.queryForObject("SELECT password_md5 FROM reader_account WHERE card_no='1001'",String.class));
-    }
     @Test void tc030_adminPostRequiresCsrf() throws Exception {
         mvc.perform(post("/api/admin/readers/1/freeze").session(adminSession()))
             .andExpect(status().isForbidden());
@@ -104,5 +90,14 @@ class ApiControllerTest {
         mvc.perform(post("/api/borrow_records/1/renew").session(session)
             .header("X-CSRF-Token",session.getAttribute("CSRF_TOKEN")))
             .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("RENEWAL_DISABLED")));
+    }
+    /** 管理台读者列表：供前端渲染冻结/解冻/注销按钮，且绝不能带出口令哈希。 */
+    @Test void tc034_adminReaderListExposesStatusWithoutPasswordHash() throws Exception {
+        mvc.perform(get("/api/admin/readers").session(adminSession()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].readerId").exists())
+            .andExpect(jsonPath("$.data[0].cardNo").exists())
+            .andExpect(jsonPath("$.data[0].status").exists())
+            .andExpect(jsonPath("$.data[0].passwordHash").doesNotExist());
     }
 }

@@ -1,0 +1,6528 @@
+{
+  "collection": {
+    "item": [
+      {
+        "id": "5c7fafa4-70ea-427b-b0c9-2e216dc04efe",
+        "name": "主流程（自动执行，00-12）",
+        "description": {
+          "content": "按顺序执行；11 在管理员会话下验证 R003 默认关闭应返回 409。",
+          "type": "text/plain"
+        },
+        "item": [
+          {
+            "id": "dde5ad2e-c434-4364-adc7-fc4dd12a6ada",
+            "name": "00 | 公共健康检查",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "health"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "dc8412bb-4f32-42dc-8ac5-525c88b28452",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"health = 200\",()=>pm.response.to.have.status(200));"
+                  ],
+                  "_lastExecutionId": "3c7b0f31-86bc-4b0f-a975-076bf3f220a9"
+                }
+              }
+            ]
+          },
+          {
+            "id": "f378acb7-c964-4b76-8e00-1aec35d84387",
+            "name": "01 | 读者登录保存会话与CSRF",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "auth",
+                  "login"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"account\": \"{{readerCardNo}}\",\n  \"password\": \"{{readerPassword}}\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "fa4cee6d-65bb-4549-b61a-f7fccfb88bf0",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Reader login = 200\",()=>pm.response.to.have.status(200));",
+                    "if(pm.response.code===200) { const d=pm.response.json().data; pm.environment.set(\"csrfToken\",d.csrfToken); }"
+                  ],
+                  "_lastExecutionId": "fcc4156c-fb6a-4734-8684-95ec4119c285"
+                }
+              }
+            ]
+          },
+          {
+            "id": "0f28d835-d58b-4a8c-b8de-53fbfc14b4ff",
+            "name": "02 | 根据书名检索图书",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "books"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [
+                  {
+                    "key": "keyword",
+                    "value": "%E4%B8%89%E4%BD%93"
+                  }
+                ],
+                "variable": []
+              },
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "ac7bb1ea-99a2-40d5-83c3-9792af5e1e5e",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                  ],
+                  "_lastExecutionId": "55fa5667-1872-45bb-a3b2-fe71b0470870"
+                }
+              }
+            ]
+          },
+          {
+            "id": "b9809f99-c9b8-47bb-94d7-d9f8718dcf71",
+            "name": "03 | R001 借阅 BC-0001",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "borrow"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-CSRF-Token",
+                  "value": "{{csrfToken}}"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"readerCardNo\": \"{{readerCardNo}}\",\n  \"barcode\": \"{{barcode}}\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "518723c0-44f3-4f18-896e-2efc0c5b0b2a",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Borrow = 200\",()=>pm.response.to.have.status(200));",
+                    "if(pm.response.code===200){const d=pm.response.json().data;pm.environment.set(\"recordId\",String(d.recordId));pm.test(\"status BORROWED\",()=>pm.expect(d.status).to.equal(\"BORROWED\"));}"
+                  ],
+                  "_lastExecutionId": "caaa7226-d41a-4bd0-9852-2ff0c6eda10b"
+                }
+              }
+            ]
+          },
+          {
+            "id": "771ec3af-bf06-4ee2-9772-49fca896926b",
+            "name": "04 | 查询本人借阅列表",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "borrow_records",
+                  "my"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "b6bd9bc1-02ad-4bd1-8fd0-f2ddb247c193",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                  ],
+                  "_lastExecutionId": "ab74bc9a-7f68-40c9-870c-87246a70b33f"
+                }
+              }
+            ]
+          },
+          {
+            "id": "895244bf-c7fb-4404-9d7f-ec0cc73db5cf",
+            "name": "05 | R002 归还借阅图书",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "return"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-CSRF-Token",
+                  "value": "{{csrfToken}}"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"barcode\": \"{{barcode}}\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "466fc1a9-9954-48e4-9608-fcb5aef8bb8e",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Return = 200\",()=>pm.response.to.have.status(200));",
+                    "if(pm.response.code===200)pm.test(\"status RETURNED\",()=>pm.expect(pm.response.json().data.status).to.equal(\"RETURNED\"));"
+                  ],
+                  "_lastExecutionId": "e4adaf28-c301-4b48-b37c-702e0aae49de"
+                }
+              }
+            ]
+          },
+          {
+            "id": "62e0b587-ac26-420d-9f79-5ce5e0e0c66f",
+            "name": "06 | 重复归还预期409",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "return"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-CSRF-Token",
+                  "value": "{{csrfToken}}"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"barcode\": \"{{barcode}}\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "9245ee14-8da4-4026-ad3c-d913560c5b69",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Duplicate return = 409\",()=>pm.response.to.have.status(409));"
+                  ],
+                  "_lastExecutionId": "ce4b6293-72a1-4233-8e88-ba3cddbee941"
+                }
+              }
+            ]
+          },
+          {
+            "id": "a7442d9c-972f-4e55-afdf-fca42a18d34f",
+            "name": "07 | 管理员登录覆盖本客户端Session",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "auth",
+                  "login"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"account\": \"{{adminAccount}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "0715d69b-232d-46ac-a632-7da3d1d9f609",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Admin login = 200\",()=>pm.response.to.have.status(200));",
+                    "if(pm.response.code===200)pm.environment.set(\"adminCsrfToken\",pm.response.json().data.csrfToken);"
+                  ],
+                  "_lastExecutionId": "af7bff84-0248-4d8f-8017-52d79e3664de"
+                }
+              }
+            ]
+          },
+          {
+            "id": "a5a60758-95b8-4f5e-98e2-ec5244192387",
+            "name": "08 | 管理员逾期名单",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "admin",
+                  "overdue"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "acce9f4a-0e37-4b2a-898e-1074b0a43b09",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                  ],
+                  "_lastExecutionId": "76c08be0-5815-4b0d-acf3-8abe9995e088"
+                }
+              }
+            ]
+          },
+          {
+            "id": "728e7b0d-0c8e-43a2-8a30-e1ca4f3f8923",
+            "name": "09 | 管理员操作日志",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "admin",
+                  "logs"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "a124ce2a-a2c4-4eaf-b1d2-07a90d9af00d",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                  ],
+                  "_lastExecutionId": "3e204ac4-9a6d-4780-95cd-cb7987d8d3b8"
+                }
+              }
+            ]
+          },
+          {
+            "id": "59e24606-fdea-4d24-b2ac-86d39b231f29",
+            "name": "10 | 管理员新书入库（首次200，重复执行409）",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "admin",
+                  "books"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-CSRF-Token",
+                  "value": "{{adminCsrfToken}}"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"barcode\": \"{{newBookBarcode}}\",\n  \"isbn\": \"9787536692930\",\n  \"title\": \"演示图书(管理员新增)\",\n  \"author\": \"演示\",\n  \"category\": \"课程\",\n  \"location\": \"开发区\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "464c9294-bd00-4e87-89a5-b01f623338dc",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Create book = 200 或已存在 409\",()=>pm.expect([200,409]).to.include(pm.response.code));",
+                    "if(pm.response.code===409){pm.test(\"重复入库为 BOOK_EXISTS\",()=>pm.expect(pm.response.json().message).to.include(\"BOOK_EXISTS\"));}"
+                  ],
+                  "_lastExecutionId": "a4498640-627a-41fc-bfed-9004ff5d21a5"
+                }
+              }
+            ]
+          },
+          {
+            "id": "d5094dd5-1a76-4ac3-a6ed-8a9f19fa63eb",
+            "name": "11 | R003 默认关闭应返回409（需要登录）",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "borrow_records",
+                  "{{recordId}}",
+                  "renew"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "X-CSRF-Token",
+                  "value": "{{adminCsrfToken}}"
+                }
+              ],
+              "method": "POST",
+              "body": {}
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "c3970169-896a-423d-bfb5-a5589d73e2d9",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"R003 disabled = 409\",()=>pm.response.to.have.status(409));"
+                  ],
+                  "_lastExecutionId": "0ec48173-b157-412d-9e2d-f760d7a2e962"
+                }
+              }
+            ]
+          },
+          {
+            "id": "bc6b6dd6-e325-430c-9f78-1178a1372c43",
+            "name": "12 | 管理员导出 CSV",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "admin",
+                  "borrow-records",
+                  "export"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "a8085dbb-f60a-45c6-bd5e-1e7cb371d0a2",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"CSV download = 200\",()=>pm.response.to.have.status(200));"
+                  ],
+                  "_lastExecutionId": "4a544ded-5c76-485d-a781-84fde1d67308"
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "7df69876-57a6-42aa-9d63-3f950f6e07cb",
+        "name": "R003 变更回归（默认关闭，需迁移+启用后单独执行）",
+        "description": {
+          "content": "只有在完成 CR-001 审批、执行 20_CR001_renewal_optional.sql 并启用 LIBRARY_RENEWAL_ENABLED=true 后才执行。本文件夹自带“读者登录 → 借不同 ISBN 的新书 → 续借”完整链路，不依赖主流程中已归还的 recordId。",
+          "type": "text/plain"
+        },
+        "item": [
+          {
+            "id": "ffc7e3ae-7729-481a-8ebc-effdcf9021b4",
+            "name": "13 | 读者登录（重建读者会话与CSRF）",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "auth",
+                  "login"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"account\": \"{{readerCardNo}}\",\n  \"password\": \"{{readerPassword}}\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "24a400a7-3b32-4ec8-b8c3-45537eada7dc",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Reader login = 200\",()=>pm.response.to.have.status(200));",
+                    "if(pm.response.code===200){pm.environment.set(\"csrfToken\",pm.response.json().data.csrfToken);}"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "9544bb54-1bd2-4352-905d-e9216107ebab",
+            "name": "14 | 借阅 BC-0003 获取活动借阅记录",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "borrow"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-CSRF-Token",
+                  "value": "{{csrfToken}}"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"readerCardNo\": \"{{readerCardNo}}\",\n  \"barcode\": \"BC-0003\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "cadc49e5-124a-4638-b989-15a5aeb1e21e",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Borrow for renewal = 200\",()=>pm.response.to.have.status(200));",
+                    "if(pm.response.code===200){pm.environment.set(\"renewRecordId\",String(pm.response.json().data.recordId));}"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "c281952c-c1cb-49d4-a4ee-a0ef580a3244",
+            "name": "15 | R003 续借成功",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "borrow_records",
+                  "{{renewRecordId}}",
+                  "renew"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "X-CSRF-Token",
+                  "value": "{{csrfToken}}"
+                }
+              ],
+              "method": "POST"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "a9b7e4d1-021b-45b9-a626-d737eda9ef04",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Renewal enabled = 200\",()=>pm.response.to.have.status(200));",
+                    "if(pm.response.code===200){pm.test(\"status still BORROWED\",()=>pm.expect(pm.response.json().data.status).to.equal(\"BORROWED\"));}"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      }
+    ],
+    "event": [],
+    "variable": [],
+    "info": {
+      "_postman_id": "6f901659-cde3-40d4-8db4-c3b3494b38fe",
+      "name": "图书借阅归还系统 · 本地联调全流程（审查版）",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "description": {
+        "content": "先01登录，按顺序03借04查05还06重复。10有写入副作用，请手动单独执行。Postman同域cookie自动保持Session；不要提交真实密码环境文件。",
+        "type": "text/plain"
+      }
+    }
+  },
+  "environment": {
+    "_": {
+      "postman_variable_scope": "environment"
+    },
+    "id": "tmp-local-1002",
+    "name": "temp local 1002",
+    "values": [
+      {
+        "type": "any",
+        "value": "http://127.0.0.1:8080",
+        "key": "baseUrl"
+      },
+      {
+        "type": "any",
+        "value": "1002",
+        "key": "readerCardNo"
+      },
+      {
+        "type": "any",
+        "value": "Reader#2026",
+        "key": "readerPassword"
+      },
+      {
+        "type": "any",
+        "value": "BC-0001",
+        "key": "barcode"
+      },
+      {
+        "type": "any",
+        "value": "3",
+        "key": "recordId"
+      },
+      {
+        "type": "any",
+        "value": "JqfIpfoX83CEC76K9VWbGhBbqdZyp86oQty0QMXTRzA",
+        "key": "csrfToken"
+      },
+      {
+        "type": "any",
+        "value": "admin",
+        "key": "adminAccount"
+      },
+      {
+        "type": "any",
+        "value": "Admin#2026",
+        "key": "adminPassword"
+      },
+      {
+        "type": "any",
+        "value": "KDt-nUU_XPPXG2nlNZpdtrcDsd-SR-OdkHXy1wqI7XY",
+        "key": "adminCsrfToken"
+      },
+      {
+        "type": "any",
+        "value": "BC-NEW-001",
+        "key": "newBookBarcode"
+      }
+    ]
+  },
+  "globals": {
+    "id": "2be780b1-3dbc-42b7-b93c-bb060feac569",
+    "values": []
+  },
+  "run": {
+    "stats": {
+      "iterations": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "items": {
+        "total": 13,
+        "pending": 0,
+        "failed": 0
+      },
+      "scripts": {
+        "total": 13,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequests": {
+        "total": 13,
+        "pending": 0,
+        "failed": 0
+      },
+      "requests": {
+        "total": 13,
+        "pending": 0,
+        "failed": 0
+      },
+      "tests": {
+        "total": 13,
+        "pending": 0,
+        "failed": 0
+      },
+      "assertions": {
+        "total": 16,
+        "pending": 0,
+        "failed": 0
+      },
+      "testScripts": {
+        "total": 13,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequestScripts": {
+        "total": 0,
+        "pending": 0,
+        "failed": 0
+      }
+    },
+    "timings": {
+      "responseAverage": 27.46153846153846,
+      "responseMin": 5,
+      "responseMax": 187,
+      "responseSd": 47.47244607237626,
+      "dnsAverage": 0,
+      "dnsMin": 0,
+      "dnsMax": 0,
+      "dnsSd": 0,
+      "firstByteAverage": 0,
+      "firstByteMin": 0,
+      "firstByteMax": 0,
+      "firstByteSd": 0,
+      "started": 1792647462771,
+      "completed": 1792647464235
+    },
+    "executions": [
+      {
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 13,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "971114e6-c883-4042-b3d1-6b6192940372",
+          "httpRequestId": "cb8670a9-b5bf-4f60-9345-5e7ab31df539"
+        },
+        "item": {
+          "id": "dde5ad2e-c434-4364-adc7-fc4dd12a6ada",
+          "name": "00 | 公共健康检查",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "health"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "dc8412bb-4f32-42dc-8ac5-525c88b28452",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"health = 200\",()=>pm.response.to.have.status(200));"
+                ],
+                "_lastExecutionId": "3c7b0f31-86bc-4b0f-a975-076bf3f220a9"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "health"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "d0f12e49-2d4b-4615-b14e-daaeb743d11e",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "a51d422c-8a8a-4393-ad12-d35085fc1c9f",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:42 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              50,
+              48,
+              48,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              115,
+              117,
+              99,
+              99,
+              101,
+              115,
+              115,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              123,
+              34,
+              115,
+              101,
+              114,
+              118,
+              105,
+              99,
+              101,
+              34,
+              58,
+              34,
+              85,
+              80,
+              34,
+              125,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 29,
+          "responseSize": 56
+        },
+        "id": "dde5ad2e-c434-4364-adc7-fc4dd12a6ada",
+        "assertions": [
+          {
+            "assertion": "health = 200",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "9879ed14-05c3-48fd-a1fd-3d9b6620d74e",
+          "length": 13,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "6e5aea5e-f8e8-4be1-9502-e199fe764999"
+        },
+        "item": {
+          "id": "f378acb7-c964-4b76-8e00-1aec35d84387",
+          "name": "01 | 读者登录保存会话与CSRF",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account\": \"{{readerCardNo}}\",\n  \"password\": \"{{readerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "fa4cee6d-65bb-4549-b61a-f7fccfb88bf0",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Reader login = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200) { const d=pm.response.json().data; pm.environment.set(\"csrfToken\",d.csrfToken); }"
+                ],
+                "_lastExecutionId": "fcc4156c-fb6a-4734-8684-95ec4119c285"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "auth",
+              "login"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "987284d1-51e7-4e5a-99fc-90517cc56e5a",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "52",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"account\": \"1002\",\n  \"password\": \"Reader#2026\"\n}",
+            "options": {
+              "raw": {
+                "language": "json"
+              }
+            }
+          }
+        },
+        "response": {
+          "id": "3967a8df-2757-43fa-a606-cf19d4255e6c",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Set-Cookie",
+              "value": "JSESSIONID=4EE66D972AB62D8409E5A1F17C854481; Path=/; HttpOnly; SameSite=Strict"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:43 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              50,
+              48,
+              48,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              115,
+              117,
+              99,
+              99,
+              101,
+              115,
+              115,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              123,
+              34,
+              114,
+              111,
+              108,
+              101,
+              34,
+              58,
+              34,
+              82,
+              69,
+              65,
+              68,
+              69,
+              82,
+              34,
+              44,
+              34,
+              97,
+              99,
+              99,
+              111,
+              117,
+              110,
+              116,
+              34,
+              58,
+              34,
+              49,
+              48,
+              48,
+              50,
+              34,
+              44,
+              34,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              230,
+              188,
+              148,
+              231,
+              164,
+              186,
+              232,
+              175,
+              187,
+              232,
+              128,
+              133,
+              50,
+              34,
+              44,
+              34,
+              99,
+              115,
+              114,
+              102,
+              84,
+              111,
+              107,
+              101,
+              110,
+              34,
+              58,
+              34,
+              74,
+              113,
+              102,
+              73,
+              112,
+              102,
+              111,
+              88,
+              56,
+              51,
+              67,
+              69,
+              67,
+              55,
+              54,
+              75,
+              57,
+              86,
+              87,
+              98,
+              71,
+              104,
+              66,
+              98,
+              113,
+              100,
+              90,
+              121,
+              112,
+              56,
+              54,
+              111,
+              81,
+              116,
+              121,
+              48,
+              81,
+              77,
+              88,
+              84,
+              82,
+              122,
+              65,
+              34,
+              125,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 187,
+          "responseSize": 155
+        },
+        "id": "f378acb7-c964-4b76-8e00-1aec35d84387",
+        "assertions": [
+          {
+            "assertion": "Reader login = 200",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "3227b0a0-35f9-466d-bd43-4f210e30b730",
+          "length": 13,
+          "cycles": 1,
+          "position": 2,
+          "iteration": 0,
+          "httpRequestId": "2dfb5c27-5e1f-4e3a-a515-5acf5b73704f"
+        },
+        "item": {
+          "id": "0f28d835-d58b-4a8c-b8de-53fbfc14b4ff",
+          "name": "02 | 根据书名检索图书",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "books"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "%E4%B8%89%E4%BD%93"
+                }
+              ],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "ac7bb1ea-99a2-40d5-83c3-9792af5e1e5e",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                ],
+                "_lastExecutionId": "55fa5667-1872-45bb-a3b2-fe71b0470870"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "books"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [
+              {
+                "key": "keyword",
+                "value": "%E4%B8%89%E4%BD%93"
+              }
+            ],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "4b058bbf-d3dc-485c-882c-a53b5c9acfa2",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=4EE66D972AB62D8409E5A1F17C854481",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "2ce838e0-0f7b-4618-bfa9-2b3cdc233aa1",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:43 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              50,
+              48,
+              48,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              115,
+              117,
+              99,
+              99,
+              101,
+              115,
+              115,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              91,
+              123,
+              34,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              34,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              105,
+              115,
+              98,
+              110,
+              34,
+              58,
+              34,
+              57,
+              55,
+              56,
+              55,
+              53,
+              51,
+              54,
+              54,
+              57,
+              50,
+              57,
+              51,
+              48,
+              34,
+              44,
+              34,
+              116,
+              105,
+              116,
+              108,
+              101,
+              34,
+              58,
+              34,
+              228,
+              184,
+              137,
+              228,
+              189,
+              147,
+              34,
+              44,
+              34,
+              97,
+              117,
+              116,
+              104,
+              111,
+              114,
+              34,
+              58,
+              34,
+              229,
+              136,
+              152,
+              230,
+              133,
+              136,
+              230,
+              172,
+              163,
+              34,
+              44,
+              34,
+              99,
+              97,
+              116,
+              101,
+              103,
+              111,
+              114,
+              121,
+              34,
+              58,
+              34,
+              231,
+              167,
+              145,
+              229,
+              185,
+              187,
+              34,
+              44,
+              34,
+              108,
+              111,
+              99,
+              97,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              65,
+              229,
+              140,
+              186,
+              34,
+              44,
+              34,
+              115,
+              116,
+              97,
+              116,
+              117,
+              115,
+              34,
+              58,
+              34,
+              65,
+              86,
+              65,
+              73,
+              76,
+              65,
+              66,
+              76,
+              69,
+              34,
+              44,
+              34,
+              97,
+              118,
+              97,
+              105,
+              108,
+              97,
+              98,
+              108,
+              101,
+              95,
+              99,
+              111,
+              117,
+              110,
+              116,
+              34,
+              58,
+              51,
+              125,
+              44,
+              123,
+              34,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              34,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              50,
+              34,
+              44,
+              34,
+              105,
+              115,
+              98,
+              110,
+              34,
+              58,
+              34,
+              57,
+              55,
+              56,
+              55,
+              53,
+              51,
+              54,
+              54,
+              57,
+              50,
+              57,
+              51,
+              48,
+              34,
+              44,
+              34,
+              116,
+              105,
+              116,
+              108,
+              101,
+              34,
+              58,
+              34,
+              228,
+              184,
+              137,
+              228,
+              189,
+              147,
+              34,
+              44,
+              34,
+              97,
+              117,
+              116,
+              104,
+              111,
+              114,
+              34,
+              58,
+              34,
+              229,
+              136,
+              152,
+              230,
+              133,
+              136,
+              230,
+              172,
+              163,
+              34,
+              44,
+              34,
+              99,
+              97,
+              116,
+              101,
+              103,
+              111,
+              114,
+              121,
+              34,
+              58,
+              34,
+              231,
+              167,
+              145,
+              229,
+              185,
+              187,
+              34,
+              44,
+              34,
+              108,
+              111,
+              99,
+              97,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              66,
+              229,
+              140,
+              186,
+              34,
+              44,
+              34,
+              115,
+              116,
+              97,
+              116,
+              117,
+              115,
+              34,
+              58,
+              34,
+              65,
+              86,
+              65,
+              73,
+              76,
+              65,
+              66,
+              76,
+              69,
+              34,
+              44,
+              34,
+              97,
+              118,
+              97,
+              105,
+              108,
+              97,
+              98,
+              108,
+              101,
+              95,
+              99,
+              111,
+              117,
+              110,
+              116,
+              34,
+              58,
+              51,
+              125,
+              93,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 14,
+          "responseSize": 365
+        },
+        "id": "0f28d835-d58b-4a8c-b8de-53fbfc14b4ff",
+        "assertions": [
+          {
+            "assertion": "Status is 200",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "4aed1c88-143f-421d-a15f-9aa8767d7c46",
+          "length": 13,
+          "cycles": 1,
+          "position": 3,
+          "iteration": 0,
+          "httpRequestId": "e68ea35f-65da-442d-b3ab-a56476823615"
+        },
+        "item": {
+          "id": "b9809f99-c9b8-47bb-94d7-d9f8718dcf71",
+          "name": "03 | R001 借阅 BC-0001",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "borrow"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"readerCardNo\": \"{{readerCardNo}}\",\n  \"barcode\": \"{{barcode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "518723c0-44f3-4f18-896e-2efc0c5b0b2a",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Borrow = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200){const d=pm.response.json().data;pm.environment.set(\"recordId\",String(d.recordId));pm.test(\"status BORROWED\",()=>pm.expect(d.status).to.equal(\"BORROWED\"));}"
+                ],
+                "_lastExecutionId": "caaa7226-d41a-4bd0-9852-2ff0c6eda10b"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "borrow"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "X-CSRF-Token",
+              "value": "JqfIpfoX83CEC76K9VWbGhBbqdZyp86oQty0QMXTRzA"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "6d2cbb7d-fce7-4773-a72f-1e06dad45019",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "52",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=4EE66D972AB62D8409E5A1F17C854481",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"readerCardNo\": \"1002\",\n  \"barcode\": \"BC-0001\"\n}",
+            "options": {
+              "raw": {
+                "language": "json"
+              }
+            }
+          }
+        },
+        "response": {
+          "id": "d193fa5f-094a-4c77-865b-793fac21a9f4",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:43 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              50,
+              48,
+              48,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              115,
+              117,
+              99,
+              99,
+              101,
+              115,
+              115,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              123,
+              34,
+              114,
+              101,
+              99,
+              111,
+              114,
+              100,
+              73,
+              100,
+              34,
+              58,
+              51,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              67,
+              97,
+              114,
+              100,
+              78,
+              111,
+              34,
+              58,
+              34,
+              49,
+              48,
+              48,
+              50,
+              34,
+              44,
+              34,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              34,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              98,
+              111,
+              111,
+              107,
+              84,
+              105,
+              116,
+              108,
+              101,
+              34,
+              58,
+              34,
+              228,
+              184,
+              137,
+              228,
+              189,
+              147,
+              34,
+              44,
+              34,
+              115,
+              116,
+              97,
+              116,
+              117,
+              115,
+              34,
+              58,
+              34,
+              66,
+              79,
+              82,
+              82,
+              79,
+              87,
+              69,
+              68,
+              34,
+              44,
+              34,
+              98,
+              111,
+              114,
+              114,
+              111,
+              119,
+              68,
+              97,
+              116,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              34,
+              44,
+              34,
+              100,
+              117,
+              101,
+              68,
+              97,
+              116,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              49,
+              45,
+              50,
+              49,
+              34,
+              44,
+              34,
+              114,
+              101,
+              116,
+              117,
+              114,
+              110,
+              68,
+              97,
+              116,
+              101,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              111,
+              118,
+              101,
+              114,
+              100,
+              117,
+              101,
+              68,
+              97,
+              121,
+              115,
+              34,
+              58,
+              48,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              83,
+              116,
+              97,
+              116,
+              117,
+              115,
+              34,
+              58,
+              34,
+              78,
+              79,
+              82,
+              77,
+              65,
+              76,
+              34,
+              125,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 47,
+          "responseSize": 244
+        },
+        "id": "b9809f99-c9b8-47bb-94d7-d9f8718dcf71",
+        "assertions": [
+          {
+            "assertion": "Borrow = 200",
+            "skipped": false
+          },
+          {
+            "assertion": "status BORROWED",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "2b194076-c787-40bc-a906-a69946225ed6",
+          "length": 13,
+          "cycles": 1,
+          "position": 4,
+          "iteration": 0,
+          "httpRequestId": "615e9b21-8ed3-4f6c-91b0-8b222b9decc3"
+        },
+        "item": {
+          "id": "771ec3af-bf06-4ee2-9772-49fca896926b",
+          "name": "04 | 查询本人借阅列表",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "borrow_records",
+                "my"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "b6bd9bc1-02ad-4bd1-8fd0-f2ddb247c193",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                ],
+                "_lastExecutionId": "ab74bc9a-7f68-40c9-870c-87246a70b33f"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "borrow_records",
+              "my"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "2bbe54c5-8be8-4596-9371-6864b8d636d2",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=4EE66D972AB62D8409E5A1F17C854481",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "208fefd5-578a-4533-a85b-fddaa0db4566",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:43 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              50,
+              48,
+              48,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              115,
+              117,
+              99,
+              99,
+              101,
+              115,
+              115,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              91,
+              123,
+              34,
+              98,
+              111,
+              114,
+              114,
+              111,
+              119,
+              95,
+              114,
+              101,
+              99,
+              111,
+              114,
+              100,
+              95,
+              105,
+              100,
+              34,
+              58,
+              51,
+              44,
+              34,
+              115,
+              116,
+              97,
+              116,
+              117,
+              115,
+              34,
+              58,
+              34,
+              66,
+              79,
+              82,
+              82,
+              79,
+              87,
+              69,
+              68,
+              34,
+              44,
+              34,
+              98,
+              111,
+              114,
+              114,
+              111,
+              119,
+              95,
+              116,
+              105,
+              109,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              51,
+              55,
+              58,
+              52,
+              51,
+              34,
+              44,
+              34,
+              101,
+              120,
+              112,
+              101,
+              99,
+              116,
+              101,
+              100,
+              95,
+              114,
+              101,
+              116,
+              117,
+              114,
+              110,
+              95,
+              100,
+              97,
+              116,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              49,
+              45,
+              50,
+              49,
+              34,
+              44,
+              34,
+              97,
+              99,
+              116,
+              117,
+              97,
+              108,
+              95,
+              114,
+              101,
+              116,
+              117,
+              114,
+              110,
+              95,
+              116,
+              105,
+              109,
+              101,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              111,
+              118,
+              101,
+              114,
+              100,
+              117,
+              101,
+              95,
+              100,
+              97,
+              121,
+              115,
+              34,
+              58,
+              48,
+              44,
+              34,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              34,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              116,
+              105,
+              116,
+              108,
+              101,
+              34,
+              58,
+              34,
+              228,
+              184,
+              137,
+              228,
+              189,
+              147,
+              34,
+              125,
+              93,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 8,
+          "responseSize": 236
+        },
+        "id": "771ec3af-bf06-4ee2-9772-49fca896926b",
+        "assertions": [
+          {
+            "assertion": "Status is 200",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "d47cd30b-e22b-4877-b7d2-4229206ad42c",
+          "length": 13,
+          "cycles": 1,
+          "position": 5,
+          "iteration": 0,
+          "httpRequestId": "2d9cd352-f6c8-46a8-acfd-edd011d04e6e"
+        },
+        "item": {
+          "id": "895244bf-c7fb-4404-9d7f-ec0cc73db5cf",
+          "name": "05 | R002 归还借阅图书",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "return"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode\": \"{{barcode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "466fc1a9-9954-48e4-9608-fcb5aef8bb8e",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Return = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200)pm.test(\"status RETURNED\",()=>pm.expect(pm.response.json().data.status).to.equal(\"RETURNED\"));"
+                ],
+                "_lastExecutionId": "e4adaf28-c301-4b48-b37c-702e0aae49de"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "return"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "X-CSRF-Token",
+              "value": "JqfIpfoX83CEC76K9VWbGhBbqdZyp86oQty0QMXTRzA"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "a8ba2d17-edb7-4a83-8167-9ad15e354357",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "26",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=4EE66D972AB62D8409E5A1F17C854481",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"barcode\": \"BC-0001\"\n}",
+            "options": {
+              "raw": {
+                "language": "json"
+              }
+            }
+          }
+        },
+        "response": {
+          "id": "7f9dabc7-f417-4ecf-b6ce-5b8184a83acd",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:43 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              50,
+              48,
+              48,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              115,
+              117,
+              99,
+              99,
+              101,
+              115,
+              115,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              123,
+              34,
+              114,
+              101,
+              99,
+              111,
+              114,
+              100,
+              73,
+              100,
+              34,
+              58,
+              51,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              67,
+              97,
+              114,
+              100,
+              78,
+              111,
+              34,
+              58,
+              34,
+              49,
+              48,
+              48,
+              50,
+              34,
+              44,
+              34,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              34,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              98,
+              111,
+              111,
+              107,
+              84,
+              105,
+              116,
+              108,
+              101,
+              34,
+              58,
+              34,
+              228,
+              184,
+              137,
+              228,
+              189,
+              147,
+              34,
+              44,
+              34,
+              115,
+              116,
+              97,
+              116,
+              117,
+              115,
+              34,
+              58,
+              34,
+              82,
+              69,
+              84,
+              85,
+              82,
+              78,
+              69,
+              68,
+              34,
+              44,
+              34,
+              98,
+              111,
+              114,
+              114,
+              111,
+              119,
+              68,
+              97,
+              116,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              34,
+              44,
+              34,
+              100,
+              117,
+              101,
+              68,
+              97,
+              116,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              49,
+              45,
+              50,
+              49,
+              34,
+              44,
+              34,
+              114,
+              101,
+              116,
+              117,
+              114,
+              110,
+              68,
+              97,
+              116,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              34,
+              44,
+              34,
+              111,
+              118,
+              101,
+              114,
+              100,
+              117,
+              101,
+              68,
+              97,
+              121,
+              115,
+              34,
+              58,
+              48,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              83,
+              116,
+              97,
+              116,
+              117,
+              115,
+              34,
+              58,
+              34,
+              78,
+              79,
+              82,
+              77,
+              65,
+              76,
+              34,
+              125,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 18,
+          "responseSize": 252
+        },
+        "id": "895244bf-c7fb-4404-9d7f-ec0cc73db5cf",
+        "assertions": [
+          {
+            "assertion": "Return = 200",
+            "skipped": false
+          },
+          {
+            "assertion": "status RETURNED",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "db9fd692-574e-4f8a-8078-5edef67862ad",
+          "length": 13,
+          "cycles": 1,
+          "position": 6,
+          "iteration": 0,
+          "httpRequestId": "4d54e1ce-bf12-4b6e-918f-26a3b419bdc2"
+        },
+        "item": {
+          "id": "62e0b587-ac26-420d-9f79-5ce5e0e0c66f",
+          "name": "06 | 重复归还预期409",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "return"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode\": \"{{barcode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "9245ee14-8da4-4026-ad3c-d913560c5b69",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Duplicate return = 409\",()=>pm.response.to.have.status(409));"
+                ],
+                "_lastExecutionId": "ce4b6293-72a1-4233-8e88-ba3cddbee941"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "return"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "X-CSRF-Token",
+              "value": "JqfIpfoX83CEC76K9VWbGhBbqdZyp86oQty0QMXTRzA"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "efcfa9fd-ac75-416c-a0f2-bb8d821fefd8",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "26",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=4EE66D972AB62D8409E5A1F17C854481",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"barcode\": \"BC-0001\"\n}",
+            "options": {
+              "raw": {
+                "language": "json"
+              }
+            }
+          }
+        },
+        "response": {
+          "id": "3b43b36b-b000-4969-9519-130d2c73ac65",
+          "status": "Conflict",
+          "code": 409,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:43 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              52,
+              48,
+              57,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              78,
+              79,
+              84,
+              95,
+              66,
+              79,
+              82,
+              82,
+              79,
+              87,
+              69,
+              68,
+              58,
+              32,
+              232,
+              175,
+              165,
+              229,
+              155,
+              190,
+              228,
+              185,
+              166,
+              230,
+              151,
+              160,
+              230,
+              156,
+              170,
+              229,
+              189,
+              146,
+              232,
+              191,
+              152,
+              232,
+              174,
+              176,
+              229,
+              189,
+              149,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 13,
+          "responseSize": 78
+        },
+        "id": "62e0b587-ac26-420d-9f79-5ce5e0e0c66f",
+        "assertions": [
+          {
+            "assertion": "Duplicate return = 409",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "a1416c54-e816-44b1-90e8-fc96a1b0d1d1",
+          "length": 13,
+          "cycles": 1,
+          "position": 7,
+          "iteration": 0,
+          "httpRequestId": "76890f35-4359-48a9-b3bc-16ad52486eeb"
+        },
+        "item": {
+          "id": "a7442d9c-972f-4e55-afdf-fca42a18d34f",
+          "name": "07 | 管理员登录覆盖本客户端Session",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account\": \"{{adminAccount}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "0715d69b-232d-46ac-a632-7da3d1d9f609",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin login = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200)pm.environment.set(\"adminCsrfToken\",pm.response.json().data.csrfToken);"
+                ],
+                "_lastExecutionId": "af7bff84-0248-4d8f-8017-52d79e3664de"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "auth",
+              "login"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "f80d303b-fc19-49c9-ae1d-4ab309befda4",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "52",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=4EE66D972AB62D8409E5A1F17C854481",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"account\": \"admin\",\n  \"password\": \"Admin#2026\"\n}",
+            "options": {
+              "raw": {
+                "language": "json"
+              }
+            }
+          }
+        },
+        "response": {
+          "id": "212d2d9e-2abe-4d19-965c-dddcd458e41f",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Set-Cookie",
+              "value": "JSESSIONID=2A1415EAFA65E54706039155637F8CC5; Path=/; HttpOnly; SameSite=Strict"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:43 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              50,
+              48,
+              48,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              115,
+              117,
+              99,
+              99,
+              101,
+              115,
+              115,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              123,
+              34,
+              114,
+              111,
+              108,
+              101,
+              34,
+              58,
+              34,
+              65,
+              68,
+              77,
+              73,
+              78,
+              34,
+              44,
+              34,
+              97,
+              99,
+              99,
+              111,
+              117,
+              110,
+              116,
+              34,
+              58,
+              34,
+              97,
+              100,
+              109,
+              105,
+              110,
+              34,
+              44,
+              34,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              231,
+              174,
+              161,
+              231,
+              144,
+              134,
+              229,
+              145,
+              152,
+              34,
+              44,
+              34,
+              99,
+              115,
+              114,
+              102,
+              84,
+              111,
+              107,
+              101,
+              110,
+              34,
+              58,
+              34,
+              75,
+              68,
+              116,
+              45,
+              110,
+              85,
+              85,
+              95,
+              88,
+              80,
+              80,
+              88,
+              71,
+              50,
+              110,
+              108,
+              78,
+              90,
+              112,
+              100,
+              116,
+              114,
+              99,
+              68,
+              115,
+              100,
+              45,
+              83,
+              82,
+              45,
+              79,
+              100,
+              107,
+              72,
+              88,
+              121,
+              49,
+              119,
+              113,
+              73,
+              55,
+              88,
+              89,
+              34,
+              125,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 5,
+          "responseSize": 151
+        },
+        "id": "a7442d9c-972f-4e55-afdf-fca42a18d34f",
+        "assertions": [
+          {
+            "assertion": "Admin login = 200",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "f360a649-b4f2-4713-a4f3-a52fab12fe1c",
+          "length": 13,
+          "cycles": 1,
+          "position": 8,
+          "iteration": 0,
+          "httpRequestId": "d17526df-e45a-4031-9497-88c70f5981a5"
+        },
+        "item": {
+          "id": "a5a60758-95b8-4f5e-98e2-ec5244192387",
+          "name": "08 | 管理员逾期名单",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "admin",
+                "overdue"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "acce9f4a-0e37-4b2a-898e-1074b0a43b09",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                ],
+                "_lastExecutionId": "76c08be0-5815-4b0d-acf3-8abe9995e088"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "admin",
+              "overdue"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "5eb3f5a1-f141-443f-b2ca-b852fcfacc3a",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=2A1415EAFA65E54706039155637F8CC5",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "985826b3-0f94-42e8-ba84-2140d2585dc7",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:43 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              50,
+              48,
+              48,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              115,
+              117,
+              99,
+              99,
+              101,
+              115,
+              115,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              91,
+              93,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 6,
+          "responseSize": 42
+        },
+        "id": "a5a60758-95b8-4f5e-98e2-ec5244192387",
+        "assertions": [
+          {
+            "assertion": "Status is 200",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "e45fff67-2bdc-4bd0-ba4f-61dd867cf451",
+          "length": 13,
+          "cycles": 1,
+          "position": 9,
+          "iteration": 0,
+          "httpRequestId": "eaede78e-a136-401f-a358-01008ebc46d4"
+        },
+        "item": {
+          "id": "728e7b0d-0c8e-43a2-8a30-e1ca4f3f8923",
+          "name": "09 | 管理员操作日志",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "admin",
+                "logs"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "a124ce2a-a2c4-4eaf-b1d2-07a90d9af00d",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                ],
+                "_lastExecutionId": "3e204ac4-9a6d-4780-95cd-cb7987d8d3b8"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "admin",
+              "logs"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "40918327-8bb4-44e8-8a44-18cd0367a212",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=2A1415EAFA65E54706039155637F8CC5",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "ec273177-f436-4426-8fbe-b2cc7a36fd63",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:43 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              50,
+              48,
+              48,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              115,
+              117,
+              99,
+              99,
+              101,
+              115,
+              115,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              91,
+              123,
+              34,
+              108,
+              111,
+              103,
+              95,
+              105,
+              100,
+              34,
+              58,
+              55,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              82,
+              69,
+              84,
+              85,
+              82,
+              78,
+              34,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              111,
+              114,
+              34,
+              58,
+              34,
+              49,
+              48,
+              48,
+              50,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              95,
+              105,
+              100,
+              34,
+              58,
+              50,
+              44,
+              34,
+              98,
+              111,
+              111,
+              107,
+              95,
+              105,
+              115,
+              98,
+              110,
+              34,
+              58,
+              34,
+              57,
+              55,
+              56,
+              55,
+              53,
+              51,
+              54,
+              54,
+              57,
+              50,
+              57,
+              51,
+              48,
+              34,
+              44,
+              34,
+              100,
+              101,
+              116,
+              97,
+              105,
+              108,
+              34,
+              58,
+              34,
+              82,
+              48,
+              48,
+              50,
+              32,
+              229,
+              189,
+              146,
+              232,
+              191,
+              152,
+              239,
+              188,
+              140,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              61,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              49,
+              239,
+              188,
+              140,
+              233,
+              128,
+              190,
+              230,
+              156,
+              159,
+              48,
+              229,
+              164,
+              169,
+              34,
+              44,
+              34,
+              111,
+              112,
+              95,
+              116,
+              105,
+              109,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              51,
+              55,
+              58,
+              52,
+              51,
+              34,
+              125,
+              44,
+              123,
+              34,
+              108,
+              111,
+              103,
+              95,
+              105,
+              100,
+              34,
+              58,
+              54,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              66,
+              79,
+              82,
+              82,
+              79,
+              87,
+              34,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              111,
+              114,
+              34,
+              58,
+              34,
+              49,
+              48,
+              48,
+              50,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              95,
+              105,
+              100,
+              34,
+              58,
+              50,
+              44,
+              34,
+              98,
+              111,
+              111,
+              107,
+              95,
+              105,
+              115,
+              98,
+              110,
+              34,
+              58,
+              34,
+              57,
+              55,
+              56,
+              55,
+              53,
+              51,
+              54,
+              54,
+              57,
+              50,
+              57,
+              51,
+              48,
+              34,
+              44,
+              34,
+              100,
+              101,
+              116,
+              97,
+              105,
+              108,
+              34,
+              58,
+              34,
+              82,
+              48,
+              48,
+              49,
+              32,
+              229,
+              128,
+              159,
+              233,
+              152,
+              133,
+              231,
+              153,
+              187,
+              232,
+              174,
+              176,
+              239,
+              188,
+              140,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              61,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              111,
+              112,
+              95,
+              116,
+              105,
+              109,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              51,
+              55,
+              58,
+              52,
+              51,
+              34,
+              125,
+              44,
+              123,
+              34,
+              108,
+              111,
+              103,
+              95,
+              105,
+              100,
+              34,
+              58,
+              53,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              82,
+              69,
+              84,
+              85,
+              82,
+              78,
+              34,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              111,
+              114,
+              34,
+              58,
+              34,
+              49,
+              48,
+              48,
+              52,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              95,
+              105,
+              100,
+              34,
+              58,
+              52,
+              44,
+              34,
+              98,
+              111,
+              111,
+              107,
+              95,
+              105,
+              115,
+              98,
+              110,
+              34,
+              58,
+              34,
+              57,
+              55,
+              56,
+              55,
+              49,
+              49,
+              49,
+              50,
+              49,
+              51,
+              56,
+              50,
+              54,
+              34,
+              44,
+              34,
+              100,
+              101,
+              116,
+              97,
+              105,
+              108,
+              34,
+              58,
+              34,
+              82,
+              48,
+              48,
+              50,
+              32,
+              229,
+              189,
+              146,
+              232,
+              191,
+              152,
+              239,
+              188,
+              140,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              61,
+              66,
+              67,
+              45,
+              67,
+              79,
+              78,
+              67,
+              45,
+              48,
+              48,
+              49,
+              239,
+              188,
+              140,
+              233,
+              128,
+              190,
+              230,
+              156,
+              159,
+              48,
+              229,
+              164,
+              169,
+              34,
+              44,
+              34,
+              111,
+              112,
+              95,
+              116,
+              105,
+              109,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              48,
+              51,
+              58,
+              49,
+              55,
+              34,
+              125,
+              44,
+              123,
+              34,
+              108,
+              111,
+              103,
+              95,
+              105,
+              100,
+              34,
+              58,
+              52,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              66,
+              79,
+              82,
+              82,
+              79,
+              87,
+              34,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              111,
+              114,
+              34,
+              58,
+              34,
+              49,
+              48,
+              48,
+              52,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              95,
+              105,
+              100,
+              34,
+              58,
+              52,
+              44,
+              34,
+              98,
+              111,
+              111,
+              107,
+              95,
+              105,
+              115,
+              98,
+              110,
+              34,
+              58,
+              34,
+              57,
+              55,
+              56,
+              55,
+              49,
+              49,
+              49,
+              50,
+              49,
+              51,
+              56,
+              50,
+              54,
+              34,
+              44,
+              34,
+              100,
+              101,
+              116,
+              97,
+              105,
+              108,
+              34,
+              58,
+              34,
+              82,
+              48,
+              48,
+              49,
+              32,
+              229,
+              128,
+              159,
+              233,
+              152,
+              133,
+              231,
+              153,
+              187,
+              232,
+              174,
+              176,
+              239,
+              188,
+              140,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              61,
+              66,
+              67,
+              45,
+              67,
+              79,
+              78,
+              67,
+              45,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              111,
+              112,
+              95,
+              116,
+              105,
+              109,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              48,
+              51,
+              58,
+              49,
+              48,
+              34,
+              125,
+              44,
+              123,
+              34,
+              108,
+              111,
+              103,
+              95,
+              105,
+              100,
+              34,
+              58,
+              51,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              65,
+              68,
+              68,
+              95,
+              66,
+              79,
+              79,
+              75,
+              34,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              111,
+              114,
+              34,
+              58,
+              34,
+              97,
+              100,
+              109,
+              105,
+              110,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              95,
+              105,
+              100,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              44,
+              34,
+              98,
+              111,
+              111,
+              107,
+              95,
+              105,
+              115,
+              98,
+              110,
+              34,
+              58,
+              34,
+              57,
+              55,
+              56,
+              55,
+              53,
+              51,
+              54,
+              54,
+              57,
+              50,
+              57,
+              51,
+              48,
+              34,
+              44,
+              34,
+              100,
+              101,
+              116,
+              97,
+              105,
+              108,
+              34,
+              58,
+              34,
+              229,
+              155,
+              190,
+              228,
+              185,
+              166,
+              229,
+              133,
+              165,
+              233,
+              166,
+              134,
+              239,
+              188,
+              140,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              61,
+              66,
+              67,
+              45,
+              78,
+              69,
+              87,
+              45,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              111,
+              112,
+              95,
+              116,
+              105,
+              109,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              48,
+              50,
+              58,
+              53,
+              57,
+              34,
+              125,
+              44,
+              123,
+              34,
+              108,
+              111,
+              103,
+              95,
+              105,
+              100,
+              34,
+              58,
+              50,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              82,
+              69,
+              84,
+              85,
+              82,
+              78,
+              34,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              111,
+              114,
+              34,
+              58,
+              34,
+              49,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              95,
+              105,
+              100,
+              34,
+              58,
+              49,
+              44,
+              34,
+              98,
+              111,
+              111,
+              107,
+              95,
+              105,
+              115,
+              98,
+              110,
+              34,
+              58,
+              34,
+              57,
+              55,
+              56,
+              55,
+              53,
+              51,
+              54,
+              54,
+              57,
+              50,
+              57,
+              51,
+              48,
+              34,
+              44,
+              34,
+              100,
+              101,
+              116,
+              97,
+              105,
+              108,
+              34,
+              58,
+              34,
+              82,
+              48,
+              48,
+              50,
+              32,
+              229,
+              189,
+              146,
+              232,
+              191,
+              152,
+              239,
+              188,
+              140,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              61,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              49,
+              239,
+              188,
+              140,
+              233,
+              128,
+              190,
+              230,
+              156,
+              159,
+              48,
+              229,
+              164,
+              169,
+              34,
+              44,
+              34,
+              111,
+              112,
+              95,
+              116,
+              105,
+              109,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              48,
+              50,
+              58,
+              53,
+              56,
+              34,
+              125,
+              44,
+              123,
+              34,
+              108,
+              111,
+              103,
+              95,
+              105,
+              100,
+              34,
+              58,
+              49,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              34,
+              66,
+              79,
+              82,
+              82,
+              79,
+              87,
+              34,
+              44,
+              34,
+              111,
+              112,
+              101,
+              114,
+              97,
+              116,
+              111,
+              114,
+              34,
+              58,
+              34,
+              49,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              95,
+              105,
+              100,
+              34,
+              58,
+              49,
+              44,
+              34,
+              98,
+              111,
+              111,
+              107,
+              95,
+              105,
+              115,
+              98,
+              110,
+              34,
+              58,
+              34,
+              57,
+              55,
+              56,
+              55,
+              53,
+              51,
+              54,
+              54,
+              57,
+              50,
+              57,
+              51,
+              48,
+              34,
+              44,
+              34,
+              100,
+              101,
+              116,
+              97,
+              105,
+              108,
+              34,
+              58,
+              34,
+              82,
+              48,
+              48,
+              49,
+              32,
+              229,
+              128,
+              159,
+              233,
+              152,
+              133,
+              231,
+              153,
+              187,
+              232,
+              174,
+              176,
+              239,
+              188,
+              140,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              61,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              111,
+              112,
+              95,
+              116,
+              105,
+              109,
+              101,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              48,
+              50,
+              58,
+              53,
+              56,
+              34,
+              125,
+              93,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 5,
+          "responseSize": 1285
+        },
+        "id": "728e7b0d-0c8e-43a2-8a30-e1ca4f3f8923",
+        "assertions": [
+          {
+            "assertion": "Status is 200",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "41013af1-f5b4-4d99-8ad2-36ddf5400ef6",
+          "length": 13,
+          "cycles": 1,
+          "position": 10,
+          "iteration": 0,
+          "httpRequestId": "b470439b-5e9a-4824-9815-644d7df52a80"
+        },
+        "item": {
+          "id": "59e24606-fdea-4d24-b2ac-86d39b231f29",
+          "name": "10 | 管理员新书入库（首次200，重复执行409）",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "admin",
+                "books"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{adminCsrfToken}}"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode\": \"{{newBookBarcode}}\",\n  \"isbn\": \"9787536692930\",\n  \"title\": \"演示图书(管理员新增)\",\n  \"author\": \"演示\",\n  \"category\": \"课程\",\n  \"location\": \"开发区\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "464c9294-bd00-4e87-89a5-b01f623338dc",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Create book = 200 或已存在 409\",()=>pm.expect([200,409]).to.include(pm.response.code));",
+                  "if(pm.response.code===409){pm.test(\"重复入库为 BOOK_EXISTS\",()=>pm.expect(pm.response.json().message).to.include(\"BOOK_EXISTS\"));}"
+                ],
+                "_lastExecutionId": "a4498640-627a-41fc-bfed-9004ff5d21a5"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "admin",
+              "books"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "X-CSRF-Token",
+              "value": "KDt-nUU_XPPXG2nlNZpdtrcDsd-SR-OdkHXy1wqI7XY"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "b504f376-f683-4e0e-8aa5-12ae2fdabd96",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "173",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=2A1415EAFA65E54706039155637F8CC5",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"barcode\": \"BC-NEW-001\",\n  \"isbn\": \"9787536692930\",\n  \"title\": \"演示图书(管理员新增)\",\n  \"author\": \"演示\",\n  \"category\": \"课程\",\n  \"location\": \"开发区\"\n}",
+            "options": {
+              "raw": {
+                "language": "json"
+              }
+            }
+          }
+        },
+        "response": {
+          "id": "2f31e4b4-ac64-4690-a89f-256d86744918",
+          "status": "Conflict",
+          "code": 409,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:44 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              52,
+              48,
+              57,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              66,
+              79,
+              79,
+              75,
+              95,
+              69,
+              88,
+              73,
+              83,
+              84,
+              83,
+              58,
+              32,
+              229,
+              155,
+              190,
+              228,
+              185,
+              166,
+              230,
+              157,
+              161,
+              231,
+              160,
+              129,
+              229,
+              183,
+              178,
+              229,
+              173,
+              152,
+              229,
+              156,
+              168,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 13,
+          "responseSize": 71
+        },
+        "id": "59e24606-fdea-4d24-b2ac-86d39b231f29",
+        "assertions": [
+          {
+            "assertion": "Create book = 200 或已存在 409",
+            "skipped": false
+          },
+          {
+            "assertion": "重复入库为 BOOK_EXISTS",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "ba774777-986d-46c6-8ba5-5f27b5ee2008",
+          "length": 13,
+          "cycles": 1,
+          "position": 11,
+          "iteration": 0,
+          "httpRequestId": "92a5d38b-ace8-4b12-b68a-b74c8ba8314a"
+        },
+        "item": {
+          "id": "d5094dd5-1a76-4ac3-a6ed-8a9f19fa63eb",
+          "name": "11 | R003 默认关闭应返回409（需要登录）",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "borrow_records",
+                "{{recordId}}",
+                "renew"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{adminCsrfToken}}"
+              }
+            ],
+            "method": "POST",
+            "body": {}
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "c3970169-896a-423d-bfb5-a5589d73e2d9",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"R003 disabled = 409\",()=>pm.response.to.have.status(409));"
+                ],
+                "_lastExecutionId": "0ec48173-b157-412d-9e2d-f760d7a2e962"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "borrow_records",
+              "3",
+              "renew"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "X-CSRF-Token",
+              "value": "KDt-nUU_XPPXG2nlNZpdtrcDsd-SR-OdkHXy1wqI7XY"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "8b406c08-72ba-40e2-91e6-09ca111fcd59",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=2A1415EAFA65E54706039155637F8CC5",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "0",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {}
+        },
+        "response": {
+          "id": "b195ebc1-52a5-49aa-a794-3376ca745757",
+          "status": "Conflict",
+          "code": 409,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Transfer-Encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:44 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              99,
+              111,
+              100,
+              101,
+              34,
+              58,
+              52,
+              48,
+              57,
+              44,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              82,
+              69,
+              78,
+              69,
+              87,
+              65,
+              76,
+              95,
+              68,
+              73,
+              83,
+              65,
+              66,
+              76,
+              69,
+              68,
+              58,
+              32,
+              82,
+              48,
+              48,
+              51,
+              32,
+              231,
+              187,
+              173,
+              229,
+              128,
+              159,
+              230,
+              154,
+              130,
+              230,
+              156,
+              170,
+              229,
+              188,
+              128,
+              233,
+              128,
+              154,
+              239,
+              188,
+              140,
+              232,
+              175,
+              183,
+              229,
+              133,
+              136,
+              229,
+              174,
+              140,
+              230,
+              136,
+              144,
+              229,
+              143,
+              152,
+              230,
+              155,
+              180,
+              229,
+              174,
+              161,
+              230,
+              137,
+              185,
+              231,
+              161,
+              174,
+              232,
+              174,
+              164,
+              229,
+              146,
+              140,
+              230,
+              149,
+              176,
+              230,
+              141,
+              174,
+              229,
+              186,
+              147,
+              232,
+              191,
+              129,
+              231,
+              167,
+              187,
+              34,
+              44,
+              34,
+              100,
+              97,
+              116,
+              97,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 7,
+          "responseSize": 129
+        },
+        "id": "d5094dd5-1a76-4ac3-a6ed-8a9f19fa63eb",
+        "assertions": [
+          {
+            "assertion": "R003 disabled = 409",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "f68365e8-b1fd-4da3-a6e7-31010ee2a9a0",
+          "length": 13,
+          "cycles": 1,
+          "position": 12,
+          "iteration": 0,
+          "httpRequestId": "53f56d18-148e-46d6-9100-a099743729a3"
+        },
+        "item": {
+          "id": "bc6b6dd6-e325-430c-9f78-1178a1372c43",
+          "name": "12 | 管理员导出 CSV",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "admin",
+                "borrow-records",
+                "export"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "a8085dbb-f60a-45c6-bd5e-1e7cb371d0a2",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"CSV download = 200\",()=>pm.response.to.have.status(200));"
+                ],
+                "_lastExecutionId": "4a544ded-5c76-485d-a781-84fde1d67308"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8080",
+            "path": [
+              "api",
+              "admin",
+              "borrow-records",
+              "export"
+            ],
+            "host": [
+              "127",
+              "0",
+              "0",
+              "1"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "3d6a289f-56d0-436c-9ba3-92d2f939afc5",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "127.0.0.1:8080",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Cookie",
+              "value": "JSESSIONID=2A1415EAFA65E54706039155637F8CC5",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "1d72caae-7176-40ad-a69f-2caeb820b039",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Disposition",
+              "value": "attachment; filename=borrow-records.csv"
+            },
+            {
+              "key": "Content-Type",
+              "value": "text/csv;charset=UTF-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "417"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 22 Oct 2026 05:37:44 GMT"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=60"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              239,
+              187,
+              191,
+              114,
+              101,
+              99,
+              111,
+              114,
+              100,
+              73,
+              100,
+              44,
+              114,
+              101,
+              97,
+              100,
+              101,
+              114,
+              67,
+              97,
+              114,
+              100,
+              78,
+              111,
+              44,
+              98,
+              97,
+              114,
+              99,
+              111,
+              100,
+              101,
+              44,
+              116,
+              105,
+              116,
+              108,
+              101,
+              44,
+              98,
+              111,
+              114,
+              114,
+              111,
+              119,
+              84,
+              105,
+              109,
+              101,
+              44,
+              100,
+              117,
+              101,
+              68,
+              97,
+              116,
+              101,
+              44,
+              114,
+              101,
+              116,
+              117,
+              114,
+              110,
+              84,
+              105,
+              109,
+              101,
+              44,
+              111,
+              118,
+              101,
+              114,
+              100,
+              117,
+              101,
+              68,
+              97,
+              121,
+              115,
+              44,
+              115,
+              116,
+              97,
+              116,
+              117,
+              115,
+              13,
+              10,
+              34,
+              49,
+              34,
+              44,
+              34,
+              49,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              228,
+              184,
+              137,
+              228,
+              189,
+              147,
+              34,
+              44,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              48,
+              50,
+              58,
+              53,
+              57,
+              34,
+              44,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              49,
+              45,
+              50,
+              49,
+              34,
+              44,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              48,
+              50,
+              58,
+              53,
+              57,
+              34,
+              44,
+              34,
+              48,
+              34,
+              44,
+              34,
+              82,
+              69,
+              84,
+              85,
+              82,
+              78,
+              69,
+              68,
+              34,
+              13,
+              10,
+              34,
+              50,
+              34,
+              44,
+              34,
+              49,
+              48,
+              48,
+              52,
+              34,
+              44,
+              34,
+              66,
+              67,
+              45,
+              67,
+              79,
+              78,
+              67,
+              45,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              229,
+              185,
+              182,
+              229,
+              143,
+              145,
+              230,
+              181,
+              139,
+              232,
+              175,
+              149,
+              228,
+              184,
+              147,
+              231,
+              148,
+              168,
+              228,
+              185,
+              166,
+              34,
+              44,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              48,
+              51,
+              58,
+              49,
+              48,
+              34,
+              44,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              49,
+              45,
+              50,
+              49,
+              34,
+              44,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              48,
+              51,
+              58,
+              49,
+              56,
+              34,
+              44,
+              34,
+              48,
+              34,
+              44,
+              34,
+              82,
+              69,
+              84,
+              85,
+              82,
+              78,
+              69,
+              68,
+              34,
+              13,
+              10,
+              34,
+              51,
+              34,
+              44,
+              34,
+              49,
+              48,
+              48,
+              50,
+              34,
+              44,
+              34,
+              66,
+              67,
+              45,
+              48,
+              48,
+              48,
+              49,
+              34,
+              44,
+              34,
+              228,
+              184,
+              137,
+              228,
+              189,
+              147,
+              34,
+              44,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              51,
+              55,
+              58,
+              52,
+              51,
+              34,
+              44,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              49,
+              45,
+              50,
+              49,
+              34,
+              44,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              49,
+              48,
+              45,
+              50,
+              50,
+              84,
+              49,
+              51,
+              58,
+              51,
+              55,
+              58,
+              52,
+              52,
+              34,
+              44,
+              34,
+              48,
+              34,
+              44,
+              34,
+              82,
+              69,
+              84,
+              85,
+              82,
+              78,
+              69,
+              68,
+              34,
+              13,
+              10
+            ]
+          },
+          "cookie": [],
+          "responseTime": 5,
+          "responseSize": 417
+        },
+        "id": "bc6b6dd6-e325-430c-9f78-1178a1372c43",
+        "assertions": [
+          {
+            "assertion": "CSV download = 200",
+            "skipped": false
+          }
+        ]
+      }
+    ],
+    "transfers": {
+      "responseTotal": 3481
+    },
+    "failures": [],
+    "error": null
+  }
+}

@@ -33,10 +33,6 @@ library:
   default-borrow-days: 30
   # 团队最新需求分析暂定 >35 天冻结；SRS 残留 >30 天处待评审修订。
   overdue-freeze-days: 35
-  # 对接上传的library_db.sql：老读者MD5登录成功后升级为BCrypt。迁移完成可改false。
-  legacy-md5-login-enabled: ${LIBRARY_LEGACY_MD5_LOGIN_ENABLED:true}
-  # 共享库禁止静默改写队友密码哈希；只在单独确认和备份后可主动开启升级。
-  legacy-md5-upgrade-enabled: ${LIBRARY_LEGACY_MD5_UPGRADE_ENABLED:false}
   # 上传SQL的CR变更单状态为已批准但尚无实施/验收记录，默认禁止续借。
   renewal-enabled: ${LIBRARY_RENEWAL_ENABLED:false}
   # 续借变更分析已写 15 天，功能默认关闭，审批+迁移+回归后才启用。
