@@ -91,4 +91,13 @@ class ApiControllerTest {
             .header("X-CSRF-Token",session.getAttribute("CSRF_TOKEN")))
             .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("RENEWAL_DISABLED")));
     }
+    /** 管理台读者列表：供前端渲染冻结/解冻/注销按钮，且绝不能带出口令哈希。 */
+    @Test void tc034_adminReaderListExposesStatusWithoutPasswordHash() throws Exception {
+        mvc.perform(get("/api/admin/readers").session(adminSession()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].readerId").exists())
+            .andExpect(jsonPath("$.data[0].cardNo").exists())
+            .andExpect(jsonPath("$.data[0].status").exists())
+            .andExpect(jsonPath("$.data[0].passwordHash").doesNotExist());
+    }
 }

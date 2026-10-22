@@ -78,5 +78,48 @@ $('addReaderForm').addEventListener('submit',e=>{e.preventDefault();run(e.curren
 });});
 $('overdueBtn').addEventListener('click',async()=>{try{renderTable($('adminResults'),await api('/api/admin/overdue'));}catch(e){message(e.message,true);}});
 $('logsBtn').addEventListener('click',async()=>{try{renderTable($('adminResults'),await api('/api/admin/logs'));}catch(e){message(e.message,true);}});
+const actionButton=(label,handler,disabled=false)=>{const b=document.createElement('button');
+  b.type='button';b.className='secondary';b.textContent=label;b.disabled=disabled;
+  b.addEventListener('click',handler);return b;};
+function renderReaderTable(container,rows){
+  container.replaceChildren();
+  if(!Array.isArray(rows)||rows.length===0){container.textContent='暂无读者';return;}
+  const table=document.createElement('table');
+  const head=document.createElement('thead');const hr=document.createElement('tr');
+  ['证号','姓名','状态','已借/上限','操作'].forEach(name=>{const th=document.createElement('th');th.textContent=name;hr.append(th);});
+  head.append(hr);table.append(head);
+  const tbody=document.createElement('tbody');
+  rows.forEach(row=>{
+    const tr=document.createElement('tr');
+    [row.cardNo,row.name,row.status,`${row.borrowedCount}/${row.borrowLimit}`].forEach(value=>{
+      const td=document.createElement('td');td.textContent=value==null?'-':String(value);tr.append(td);});
+    const td=document.createElement('td');
+    if(row.status==='INACTIVE'){td.textContent='已注销';}
+    else{
+      td.append(actionButton('冻结',()=>readerAction(row.readerId,'freeze'),row.status==='FROZEN'));
+      td.append(actionButton('解冻',()=>readerAction(row.readerId,'unfreeze'),row.status!=='FROZEN'));
+      td.append(actionButton('注销',()=>readerAction(row.readerId,'deactivate'),Number(row.borrowedCount)>0));
+    }
+    tr.append(td);tbody.append(tr);
+  });
+  table.append(tbody);container.append(table);
+}
+async function loadReaders(){
+  try{renderReaderTable($('readerAdminResults'),await api('/api/admin/readers'));}
+  catch(e){message(e.message,true);}
+}
+async function readerAction(id,action){
+  try{
+    const status=await api(`/api/admin/readers/${id}/${action}`,'POST');
+    message(action==='deactivate'?`读者 ${id} 已注销`:`读者 ${id} 操作成功，当前状态 ${status}`);
+    await loadReaders();
+  }catch(e){message(e.message,true);}
+}
+$('readerListBtn').addEventListener('click',loadReaders);
+$('retireBookForm').addEventListener('submit',e=>{e.preventDefault();run(e.currentTarget,async()=>{
+  const barcode=fields(e.currentTarget).barcode.trim();
+  await api('/api/admin/books/'+encodeURIComponent(barcode)+'/retire','POST');
+  message(`已下架 ${barcode}`);e.currentTarget.reset();await searchBooks();
+});});
 // 浏览器刷新后，恢复仍有效的服务器会话（不在 localStorage 保存口令或 CSRF）。
 api('/api/auth/me').then(data=>{showLoggedIn(data);searchBooks().catch(()=>{});if(currentRole==='READER')loadMine().catch(()=>{});}).catch(()=>{});

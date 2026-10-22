@@ -4,6 +4,7 @@ import edu.course.library.dto.ApiResult;
 import edu.course.library.dto.Forms;
 import edu.course.library.mapper.LoanMapper;
 import edu.course.library.mapper.OperationLogMapper;
+import edu.course.library.mapper.ReaderMapper;
 import edu.course.library.service.AdminService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -22,9 +23,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin")
 public class AdminController {
     private final AdminService admin;private final LoanMapper loans;
-    private final OperationLogMapper logs;private final Clock clock;
-    public AdminController(AdminService admin,LoanMapper loans,OperationLogMapper logs,Clock clock){
-        this.admin=admin;this.loans=loans;this.logs=logs;this.clock=clock;
+    private final OperationLogMapper logs;private final ReaderMapper readers;private final Clock clock;
+    public AdminController(AdminService admin,LoanMapper loans,OperationLogMapper logs,
+                           ReaderMapper readers,Clock clock){
+        this.admin=admin;this.loans=loans;this.logs=logs;this.readers=readers;this.clock=clock;
     }
     @PostMapping("/readers")
     public ApiResult<Map<String,Long>> register(@Valid @RequestBody Forms.RegisterReader req,HttpSession s){
@@ -50,6 +52,8 @@ public class AdminController {
     public ApiResult<String> retire(@PathVariable String barcode,HttpSession s){
         admin.retireBook(barcode,(String)s.getAttribute("ACCOUNT"));return ApiResult.ok("已下架");
     }
+    @GetMapping("/readers")
+    public ApiResult<List<Map<String,Object>>> readers(){return ApiResult.ok(readers.findAllForAdmin());}
     @GetMapping("/overdue")
     public ApiResult<List<Map<String,Object>>> overdue(){return ApiResult.ok(loans.overdueRows(LocalDate.now(clock)));}
     @GetMapping("/logs")

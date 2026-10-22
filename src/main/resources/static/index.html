@@ -31,7 +31,11 @@
 <form id="addReaderForm"><h3>注册读者</h3><label>证号<input name="cardNo" required placeholder="4-12位数字"></label>
 <label>姓名<input name="name" required></label><label>密码<input name="password" type="password" required minlength="8"></label>
 <label>最大借阅量<input name="borrowLimit" type="number" min="1" max="50" value="5" required></label><button>新增读者</button></form>
-</div><div class="inline"><button class="secondary" id="overdueBtn">查看逾期名单</button>
+</div><div class="two">
+<form id="retireBookForm"><h3>下架实体书</h3><label>条码<input name="barcode" required placeholder="BC-0002"></label><button>确认下架</button></form>
+<div><h3>读者状态管理</h3><button class="secondary" id="readerListBtn" type="button">刷新读者列表</button>
+<p class="micro">冻结后读者不可借阅；解冻会按剩余未还逾期重新计算；有未归还图书的读者不可注销。</p></div>
+</div><div id="readerAdminResults" class="results"></div><div class="inline"><button class="secondary" id="overdueBtn">查看逾期名单</button>
 <button class="secondary" id="logsBtn">查看最近操作日志</button>
 <a class="download" href="/api/admin/borrow-records/export" id="exportBtn">导出 CSV</a></div>
 <div id="adminResults" class="results"></div></section>
