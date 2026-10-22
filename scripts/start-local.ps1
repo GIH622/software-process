@@ -32,5 +32,11 @@ if ($mvnCommand) {
     throw '找不到 mvn.cmd：请安装 Maven，配置 PATH/MAVEN_HOME，再运行本脚本。'
 }
 Write-Host "使用 Maven：$mvnPath"
-& $mvnPath spring-boot:run
-if ($LASTEXITCODE -ne 0) { throw "Maven 启动失败，退出码 $LASTEXITCODE" }
+# 本机中文路径下 mvn spring-boot:run 会报 ClassNotFoundException: LibraryApplication，
+# 因此固定采用“打包 + java -jar”，与 docs/03 的实测方式保持一致。
+$jar = 'target\library-process-dev-1.0.0-SNAPSHOT.jar'
+& $mvnPath -B -DskipTests package
+if ($LASTEXITCODE -ne 0) { throw "Maven 打包失败，退出码 $LASTEXITCODE" }
+if (!(Test-Path $jar)) { throw "未找到 $jar，请确认 mvn package 是否成功" }
+java -jar $jar
+if ($LASTEXITCODE -ne 0) { throw "应用启动失败，退出码 $LASTEXITCODE" }
