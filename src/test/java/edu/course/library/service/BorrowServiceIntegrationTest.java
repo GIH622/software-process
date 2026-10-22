@@ -163,4 +163,19 @@ class BorrowServiceIntegrationTest {
         assertEquals("NORMAL",adminService.setFreeze(id,false,"testadmin"));
         assertEquals("NORMAL",readers.findByCard("1001").status());
     }
+
+    /**
+     * 回归：定时任务尚未刷新状态时，直接归还一本逾期 36 天的书也必须冻结。
+     * 旧实现只统计剩余 BORROWED 记录，刚归还的记录已被排除，读者可借此逃避冻结。
+     */
+    @Test void tc033_returnOverdueBookFreezesWithoutSchedulerRefresh(){
+        borrow();
+        jdbc.update("UPDATE borrow_record SET expected_return_date=? WHERE status='BORROWED'",
+            LocalDate.of(2026,9,14));
+        assertEquals("NORMAL",readers.findByCard("1001").status());
+        var result=service.returnBook("BC-0001","1001","READER");
+        assertEquals(36,result.overdueDays());
+        assertEquals("FROZEN",result.readerStatus());
+        assertEquals("FROZEN",readers.findByCard("1001").status());
+    }
 }

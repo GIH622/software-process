@@ -40,11 +40,10 @@ public class AdminService {
         if(reader==null)throw new BusinessException(HttpStatus.NOT_FOUND,"READER_NOT_FOUND","读者不存在");
         if("INACTIVE".equals(reader.status()))throw new BusinessException(HttpStatus.CONFLICT,"READER_INACTIVE","已注销读者不可操作");
         readers.setFreeze(id,frozen);
-        // 解冻并不等于允许逾期读者借书；立刻重算剩余未归还逾期。
-        String status=frozen?"FROZEN":overdue.recomputeUnderLock(
-            new Reader(reader.id(),reader.cardNo(),reader.name(),reader.passwordHash(),"NORMAL",
-                       reader.borrowedCount(),reader.borrowLimit()));
-        logs.insert(frozen?"FREEZE":"UNFREEZE",operator,id,null,"调整读者冻结状态（旧库无法区分冻结来源）");return status;
+        // 解冻走显式重算：仍欠超过 freezeDays 的逾期会立刻回到 FROZEN，解冻不等于放行。
+        String status=frozen?"FROZEN":overdue.recomputeAfterUnfreeze(readers.lockById(id));
+        logs.insert(frozen?"FREEZE":"UNFREEZE",operator,id,null,
+            frozen?"手动冻结读者":"手动解冻并按剩余未还逾期重算");return status;
     }
     @Transactional
     public void deactivate(long id,String operator){
