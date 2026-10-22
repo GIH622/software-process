@@ -20,6 +20,6 @@ public class LibraryApplication {
     /** 使用北京时间决定“今天是否逾期”，避免测试机器本地时区影响结果。 */
     @Bean public Clock libraryClock() { return Clock.system(ZoneId.of("Asia/Shanghai")); }
 
-    /** 现有旧库仍命名 password_md5；新用户及成功迁移的旧用户实际保存 BCrypt 哈希。 */
+    /** 读者口令一律 BCrypt（成本因子10）；旧库 MD5 已随 2026-10-23 退役迁移清理。 */
     @Bean public BCryptPasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(10); }
 }

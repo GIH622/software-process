@@ -17,7 +17,7 @@ public class ReaderMapper {
     public ReaderMapper(JdbcTemplate jdbc) {this.jdbc=jdbc;}
     private static Reader map(ResultSet rs, int row) throws java.sql.SQLException {
         return new Reader(rs.getLong("reader_id"),rs.getString("card_no"),rs.getString("name"),
-            rs.getString("password_md5"),rs.getString("status"),
+            rs.getString("password_hash"),rs.getString("status"),
             rs.getInt("borrowed_count"),rs.getInt("borrow_limit"));
     }
     public Reader findByCard(String cardNo) {
@@ -47,16 +47,11 @@ public class ReaderMapper {
         return jdbc.update("UPDATE reader_account SET status=? WHERE reader_id=? AND status<>'INACTIVE'",
             frozen?"FROZEN":"NORMAL",id);
     }
-    /** 遗留的 MD5 在验证通过后原位升级为 BCrypt（长度60，原 varchar(64) 可容纳）。 */
-    public int upgradeLegacyPassword(long id,String oldHash,String newHash) {
-        return jdbc.update("UPDATE reader_account SET password_md5=? WHERE reader_id=? AND password_md5=?",
-            newHash,id,oldHash);
-    }
     public int deactivate(long id) {return jdbc.update("UPDATE reader_account SET status='INACTIVE' WHERE reader_id=?",id);}
     public long insert(String cardNo,String name,String passwordHash,int limit) {
         GeneratedKeyHolder key=new GeneratedKeyHolder();
         jdbc.update(c->{PreparedStatement ps=c.prepareStatement(
-            "INSERT INTO reader_account(card_no,name,password_md5,status,borrowed_count,borrow_limit,register_date) "+
+            "INSERT INTO reader_account(card_no,name,password_hash,status,borrowed_count,borrow_limit,register_date) "+
             "VALUES(?,?,?,'NORMAL',0,?,?)",Statement.RETURN_GENERATED_KEYS);
             ps.setString(1,cardNo);ps.setString(2,name);ps.setString(3,passwordHash);ps.setInt(4,limit);
             ps.setDate(5,java.sql.Date.valueOf(LocalDate.now()));return ps;},key);
@@ -66,5 +61,19 @@ public class ReaderMapper {
     public List<Long> findIds() {
         return jdbc.query("SELECT reader_id FROM reader_account WHERE status<>'INACTIVE' ORDER BY reader_id",
             (rs,n)->rs.getLong(1));
+    }
+    /** 管理台读者列表：不返回口令哈希，只暴露状态维护所需字段。 */
+    public List<java.util.Map<String,Object>> findAllForAdmin() {
+        return jdbc.query("SELECT reader_id,card_no,name,status,borrowed_count,borrow_limit "+
+            "FROM reader_account ORDER BY reader_id",(rs,n)->{
+            java.util.Map<String,Object> row=new java.util.LinkedHashMap<>();
+            row.put("readerId",rs.getLong("reader_id"));
+            row.put("cardNo",rs.getString("card_no"));
+            row.put("name",rs.getString("name"));
+            row.put("status",rs.getString("status"));
+            row.put("borrowedCount",rs.getInt("borrowed_count"));
+            row.put("borrowLimit",rs.getInt("borrow_limit"));
+            return row;
+        });
     }
 }
