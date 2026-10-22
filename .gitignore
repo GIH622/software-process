@@ -13,7 +13,11 @@
 *.local.yml
 *.local.yaml
 /postman/*local*.postman_environment.json
+# 模板不含口令，必须随仓库提供；上面的规则在 Windows 下会误伤它，这里显式放行
+!/postman/Library_Local_Template.postman_environment.json
 /reports/private/
 
 # 原始数据库快照保留在交付ZIP，但默认不上传GitHub
 /references/library_db.sql
+# 2026-10-23 旧库退役：library_db.sql 不再随仓库分发（本地留档，见 docs/14）
+/sql/library_db.sql
