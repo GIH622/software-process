@@ -1,0 +1,3 @@
+﻿缺陷标题,所属产品,所属模块,严重程度,优先级,缺陷类型,重现步骤,期望结果,实际结果,根因分析,建议方案,关联用例,状态
+scripts/check-environment.ps1 在中文 Windows PowerShell 5.1 下无法解析,图书借阅归还登记系统,工具脚本,一般,中,配置相关,"① 在项目根目录执行 .\scripts\check-environment.ps1（PowerShell 5.1）
+② 观察控制台报错",正常输出 java / javac / mvn / mysql 的检出结果，以及本机 3306 端口连通性判断,ParserError: The string is missing the terminator（第 13 行），脚本完全无法执行,脚本以 UTF-8 无 BOM 存盘，PowerShell 5.1 按系统 ANSI(GBK) 解码中文注释，导致引号配对错位,将 .ps1 另存为带 BOM 的 UTF-8；本地已验证转码后脚本可正常运行,—（工具/环境，无对应用例）,待修复
