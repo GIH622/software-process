@@ -1,0 +1,476 @@
+{
+  "info": {
+    "name": "图书借阅归还系统 · 本地联调全流程（审查版）",
+    "description": "先01登录，按顺序03借04查05还06重复。10有写入副作用，请手动单独执行。Postman同域cookie自动保持Session；不要提交真实密码环境文件。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "主流程（自动执行，00-12）",
+      "description": "按顺序执行；11 在管理员会话下验证 R003 默认关闭应返回 409。",
+      "item": [
+        {
+          "name": "00 | 公共健康检查",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"health = 200\",()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01 | 读者登录保存会话与CSRF",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account\": \"{{readerCardNo}}\",\n  \"password\": \"{{readerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Reader login = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200) { const d=pm.response.json().data; pm.environment.set(\"csrfToken\",d.csrfToken); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 | 根据书名检索图书",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/books?keyword=%E4%B8%89%E4%BD%93"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 | R001 借阅 BC-0001",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/borrow",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"readerCardNo\": \"{{readerCardNo}}\",\n  \"barcode\": \"{{barcode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Borrow = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200){const d=pm.response.json().data;pm.environment.set(\"recordId\",String(d.recordId));pm.test(\"status BORROWED\",()=>pm.expect(d.status).to.equal(\"BORROWED\"));}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 | 查询本人借阅列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/borrow_records/my"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 | R002 归还借阅图书",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/return",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode\": \"{{barcode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Return = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200)pm.test(\"status RETURNED\",()=>pm.expect(pm.response.json().data.status).to.equal(\"RETURNED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 | 重复归还预期409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/return",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode\": \"{{barcode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Duplicate return = 409\",()=>pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 | 管理员登录覆盖本客户端Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account\": \"{{adminAccount}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin login = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200)pm.environment.set(\"adminCsrfToken\",pm.response.json().data.csrfToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 | 管理员逾期名单",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/overdue"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 | 管理员操作日志",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/logs"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\",()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 | 管理员新书入库（首次200，重复执行409）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{adminCsrfToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/books",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode\": \"{{newBookBarcode}}\",\n  \"isbn\": \"9787536692930\",\n  \"title\": \"演示图书(管理员新增)\",\n  \"author\": \"演示\",\n  \"category\": \"课程\",\n  \"location\": \"开发区\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Create book = 200 或已存在 409\",()=>pm.expect([200,409]).to.include(pm.response.code));",
+                  "if(pm.response.code===409){pm.test(\"重复入库为 BOOK_EXISTS\",()=>pm.expect(pm.response.json().message).to.include(\"BOOK_EXISTS\"));}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 | R003 默认关闭应返回409（需要登录）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{adminCsrfToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/borrow_records/{{recordId}}/renew",
+            "body": {}
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"R003 disabled = 409\",()=>pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 | 管理员导出 CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/borrow-records/export"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"CSV download = 200\",()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "R003 变更回归（默认关闭，需迁移+启用后单独执行）",
+      "description": "只有在完成 CR-001 审批、执行 20_CR001_renewal_optional.sql 并启用 LIBRARY_RENEWAL_ENABLED=true 后才执行。本文件夹自带“读者登录 → 借不同 ISBN 的新书 → 续借”完整链路，不依赖主流程中已归还的 recordId。",
+      "item": [
+        {
+          "name": "13 | 读者登录（重建读者会话与CSRF）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account\": \"{{readerCardNo}}\",\n  \"password\": \"{{readerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Reader login = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200){pm.environment.set(\"csrfToken\",pm.response.json().data.csrfToken);}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14 | 借阅 BC-0003 获取活动借阅记录",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/borrow",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"readerCardNo\": \"{{readerCardNo}}\",\n  \"barcode\": \"BC-0003\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Borrow for renewal = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200){pm.environment.set(\"renewRecordId\",String(pm.response.json().data.recordId));}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15 | R003 续借成功",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/borrow_records/{{renewRecordId}}/renew"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Renewal enabled = 200\",()=>pm.response.to.have.status(200));",
+                  "if(pm.response.code===200){pm.test(\"status still BORROWED\",()=>pm.expect(pm.response.json().data.status).to.equal(\"BORROWED\"));}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

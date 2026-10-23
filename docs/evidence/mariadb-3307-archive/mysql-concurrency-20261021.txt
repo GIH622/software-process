@@ -1,0 +1,12 @@
+﻿(1001, 409, 'BOOK_UNAVAILABLE: 该图书当前无可借库存')
+(1002, 409, 'BOOK_UNAVAILABLE: 该图书当前无可借库存')
+(1003, 409, 'BOOK_UNAVAILABLE: 该图书当前无可借库存')
+(1004, 409, 'BOOK_UNAVAILABLE: 该图书当前无可借库存')
+(1005, 409, 'BOOK_UNAVAILABLE: 该图书当前无可借库存')
+(1006, 409, 'BOOK_UNAVAILABLE: 该图书当前无可借库存')
+(1007, 409, 'BOOK_UNAVAILABLE: 该图书当前无可借库存')
+(1008, 409, 'BOOK_UNAVAILABLE: 该图书当前无可借库存')
+(1009, 409, 'BOOK_UNAVAILABLE: 该图书当前无可借库存')
+(1010, 200, 'success')
+并发结果：success=1, expected=1
+HTTP 并发条件通过；请继续使用 sql/04_verify_consistency.sql 人工检查真实 MySQL 数据。
