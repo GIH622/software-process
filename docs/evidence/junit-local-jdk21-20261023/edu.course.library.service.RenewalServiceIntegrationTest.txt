@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: edu.course.library.service.RenewalServiceIntegrationTest
 -------------------------------------------------------------------------------
-Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.027 s -- in edu.course.library.service.RenewalServiceIntegrationTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.725 s -- in edu.course.library.service.RenewalServiceIntegrationTest
