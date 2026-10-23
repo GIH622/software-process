@@ -16,16 +16,14 @@
 |---|---|---|
 | `newman-main-mysql8-20261023-retire.json` | 袁跃宝 | Postman 主流程 13 请求 / 15 断言（清库重建后，首次入库 200 分支） |
 | `newman-main-mysql8-20261022-postfix.json` | 袁跃宝 | Postman 主流程 13 请求 / 16 断言（重复入库 409 分支） |
-| `newman-main-mysql8-20261022.json` | 袁跃宝 | 上述复跑的早期版本，被 postfix 版取代 |
+
 | `db-consistency-mysql8-20261022.txt` | 袁跃宝 | 真实 MySQL 一致性检查，4 类不一致 0 行 |
 | `mysql-concurrency-mysql8-20261022.txt` | 袁跃宝 | 10 线程争抢同一副本，success=1 |
-| `junit/` | 袁跃宝 | **开发侧首轮 JUnit 记录（3 个测试类、JDK 17）。已被 `junit-local-jdk21-20261023/` 取代**（后者多 2 个类、共 51 项），保留作历史 |
 
 ## 三、归档（不再作为最终证据）
 
 | 目录 | 说明 |
 |---|---|
-| `mariadb-3307-archive/` | 2026-10-21 在 MariaDB 10.4 过渡环境上的实测（一致性、并发、newman）。旧库退役后环境已切换为 MySQL 8，故归档保留、不作结论依据 |
 
 ## 四、证据与文档的对应关系
 
