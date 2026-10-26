@@ -1,0 +1,109 @@
+﻿用例编号,所属产品,所属模块/需求,用例标题,前置条件,测试步骤,预期结果,优先级,用例类型,备注
+TC-R001-01,图书借阅归还登记系统,R001 图书借阅,正常借阅成功,读者 1001 状态 NORMAL、已借 0 本；副本 BC-0001 状态 AVAILABLE；已登录,"① POST /api/borrow，body: {""readerCardNo"":""1001"",""barcode"":""BC-0001""}
+② 查询 book_copy 状态
+③ 查询 borrow_record 与 reader","① HTTP 200，code=200，data.status=BORROWED，到期日=借出日+30 天
+② 副本状态变为 BORROWED
+③ 新增一条 BORROWED 借阅记录；读者 borrowed_count 由 0 变 1；operation_log 新增 BORROW 记录",高,功能测试,关联需求 R001；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R001-02,图书借阅归还登记系统,R001 图书借阅,已达最大同时借阅数量,读者 borrowed_count = borrowLimit = 5；目标副本 AVAILABLE,① POST /api/borrow 借一本可借图书,"① HTTP 409，message=已达最大同时借阅数量
+② 副本仍为 AVAILABLE，借阅记录数不变（无部分写入）",高,功能测试,关联需求 R001；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R001-03,图书借阅归还登记系统,R001 图书借阅,图书已被借出不可借,副本 BC-0002 状态为 BORROWED,① POST /api/borrow 借 BC-0002,"① HTTP 409，message=该图书当前无可借库存
+② 读者 borrowed_count 不变",高,功能测试,关联需求 R001；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R001-04,图书借阅归还登记系统,R001 图书借阅,受限读者不可借阅,读者 1002 状态为 FROZEN,① POST /api/borrow，readerCardNo=1002,"① HTTP 403，message 含“读者当前不可借阅：FROZEN”
+② 不生成借阅记录",中,功能测试,关联需求 R001；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R001-05,图书借阅归还登记系统,R001 图书借阅,同一读者当日重复借同 ISBN,读者当日已借 BC-0001（ISBN 978-7-111-00001）；副本 BC-0002 同 ISBN 且 AVAILABLE,① 当日 POST /api/borrow 借 BC-0002,"① HTTP 409，message=同一读者当日已登记同一本ISBN的借阅
+② 不生成第二条记录",中,功能测试,关联需求 R001；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R001-06,图书借阅归还登记系统,R001 图书借阅,图书条码不存在,读者 1001 正常,① POST /api/borrow，barcode=NOT-EXIST-999,"① HTTP 404，message=未找到图书条码
+② 无数据变更",中,功能测试,关联需求 R001；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R001-07,图书借阅归还登记系统,R001 图书借阅,读者证号不存在,已登录（管理员）,① POST /api/borrow，readerCardNo=NOT-EXIST,"① HTTP 404，message=读者不存在
+② 无数据变更",中,功能测试,关联需求 R001；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R001-08,图书借阅归还登记系统,R001 图书借阅,读者越权替他人借书,以 READER 角色登录读者 A；body 中 readerCardNo 填写读者 B,① POST /api/borrow，readerCardNo=读者B,"① HTTP 403，message=读者只能操作自己的借阅记录
+② 不生成借阅记录",高,功能测试,关联需求 R001；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R001-09,图书借阅归还登记系统,R001 图书借阅,未登录调用受保护接口,不携带会话 Cookie（未登录）,① POST /api/borrow，body 合法,"① HTTP 401，错误码 AUTH_REQUIRED（拦截器统一抛出），data 为 null
+② 无业务数据变更",高,功能测试,关联需求 R001；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R001-10,图书借阅归还登记系统,R001 图书借阅,借阅事务原子性（故障注入）,开启 MutationProbe 故障注入，使其在 afterBorrowWrites 处抛出异常,"① 执行一次本应成功的借阅
+② 分别查询 book_copy、borrow_record、reader 三处","① 请求返回 5xx
+② 副本仍 AVAILABLE、无新增借阅记录、reader.borrowed_count 未变——三步写入全部回滚，证明强事务特性",高,功能测试,关联需求 R001；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R002-01,图书借阅归还登记系统,R002 图书归还,正常归还（未逾期）,存在 BC-0001 的未归还借阅记录，到期日晚于今日,"① POST /api/return，body: {""barcode"":""BC-0001""}
+② 查询三张表","① HTTP 200，data.status=RETURNED，data.overdueDays=0
+② 副本恢复 AVAILABLE；borrowed_count 减 1；借阅记录 status=RETURNED 且 return_time 有值",高,功能测试,关联需求 R002；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R002-02,图书借阅归还登记系统,R002 图书归还,逾期归还（逾期天数计算）,借阅记录到期日 = 今日 - 5 天，读者当前 NORMAL,"① POST /api/return 归还该书
+② 查看返回的 overdueDays 与读者状态","① HTTP 200，overdueDays=5
+② 不产生罚金金额（本 SRS 排除收费）
+③ 读者状态按“本次逾期+剩余未还”重算，未达 35 天阈值则保持 NORMAL",高,功能测试,关联需求 R002；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R002-03,图书借阅归还登记系统,R002 图书归还,重复归还已归还图书,该条码对应的借阅记录已是 RETURNED，副本 AVAILABLE,① 再次 POST /api/return，barcode 相同,"① HTTP 409，message=该图书无未归还记录（或“该图书已归还或状态不一致”）
+② 数据无变化",高,功能测试,关联需求 R002；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R002-04,图书借阅归还登记系统,R002 图书归还,归还从未借出的图书,副本 BC-0003 状态 AVAILABLE，无任何借阅记录,① POST /api/return，barcode=BC-0003,"① HTTP 409，message=该图书无未归还记录
+② 数据无变化",中,功能测试,关联需求 R002；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R002-05,图书借阅归还登记系统,R002 图书归还,读者越权归还他人图书,以 READER 角色登录读者 A；BC-0001 的未还记录属于读者 B,① POST /api/return，barcode=BC-0001,"① HTTP 403，message=读者只能操作自己的借阅记录
+② 记录仍为 BORROWED",中,功能测试,关联需求 R002；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R002-06,图书借阅归还登记系统,R002 图书归还,归还事务原子性（故障注入）,开启 MutationProbe 故障注入，使其在 afterReturnWrites 处抛出异常,"① 执行一次本应成功的归还
+② 查询三张表","① 请求返回 5xx
+② 借阅记录仍未 RETURNED、副本未释放、borrowed_count 未减——全部回滚",高,功能测试,关联需求 R002；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R003-01,图书借阅归还登记系统,R003 图书续借（变更新增）,续借功能默认关闭,library.renewal-enabled=false（默认）；存在一条 BORROWED 记录 id=1,① POST /api/borrow_records/1/renew,"① HTTP 409，message 含“R003 续借暂未开通”
+② 到期日不变",高,功能测试,关联需求 R003；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R003-02,图书借阅归还登记系统,R003 图书续借（变更新增）,开启后正常续借,renewal-enabled=true；记录为 BORROWED、未逾期、renewal_count=0、maxRenewals=1；操作者本人或管理员,"① POST /api/borrow_records/1/renew
+② 查询该记录到期日与 renewal_count","① HTTP 200，data.status=BORROWED
+② 到期日 = 原到期日 + 15 天；renewal_count 变 1；operation_log 新增 RENEW 记录",高,功能测试,关联需求 R003；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R003-03,图书借阅归还登记系统,R003 图书续借（变更新增）,超过续借次数上限,某记录 renewal_count 已达到 maxRenewals(1),① 再次 POST 该记录的 renew 接口,"① HTTP 409，message=已达到续借次数上限
+② 到期日不变",高,功能测试,关联需求 R003；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R003-04,图书借阅归还登记系统,R003 图书续借（变更新增）,已逾期记录不可续借,记录 due_date 早于今日（已逾期）,① POST 该记录的 renew 接口,"① HTTP 409，message=已逾期记录不能续借
+② 到期日不变",高,功能测试,关联需求 R003；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R003-05,图书借阅归还登记系统,R003 图书续借（变更新增）,已归还记录不可续借,记录 status 为 RETURNED,① POST 该记录的 renew 接口,"① HTTP 409，message=该借阅记录已归还或状态异常
+② 数据无变化",中,功能测试,关联需求 R003；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R003-06,图书借阅归还登记系统,R003 图书续借（变更新增）,借阅记录不存在,renewal-enabled=true,① POST /api/borrow_records/999999/renew,"① HTTP 404，message=借阅记录不存在
+② 数据无变化",中,功能测试,关联需求 R003；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R004-01,图书借阅归还登记系统,R004 馆藏书目查询,馆藏书目关键词查询,存在书名含“数据库”的在架图书若干,① GET /api/books?keyword=数据库,"① HTTP 200，code=200
+② data 为匹配到的书目数组，每条含条码、书名、作者、ISBN、在架状态",高,功能测试,关联需求 R004；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R004-02,图书借阅归还登记系统,R004 馆藏书目查询,关键词超过长度上限,已登录,① GET /api/books?keyword=（101 个字符）,"① HTTP 400，message=关键词不能超过100字符
+② 不返回书目数据",中,功能测试,关联需求 R004；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R004-03,图书借阅归还登记系统,R004 馆藏书目查询,无匹配结果时正常返回,关键词在馆藏中不存在,① GET /api/books?keyword=ZZZ不存在ZZZ,"① HTTP 200
+② data 为空数组，不返回错误码（区分“无结果”与“请求失败”）",中,功能测试,关联需求 R004；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R005-01,图书借阅归还登记系统,R005 逾期处理与限制借阅,管理员查询逾期列表,存在 1 条已过到期日但未归还的借阅记录；以 ADMIN 登录,① GET /api/admin/overdue,"① HTTP 200
+② 列表中包含该记录，且 overdueDays 与（今日-到期日）一致；已归还记录不出现",高,功能测试,关联需求 R005；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R005-02,图书借阅归还登记系统,R005 逾期处理与限制借阅,逾期未达阈值读者不可继续借阅,读者存在逾期未还记录，状态被重算为受限（非 NORMAL）,① POST /api/borrow 借一本可借图书,"① HTTP 403，message 含“读者当前不可借阅”
+② 不生成借阅记录",高,功能测试,关联需求 R005；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R005-03,图书借阅归还登记系统,R005 逾期处理与限制借阅,逾期达阈值冻结且归还后不自动解冻,读者逾期天数 ≥ 35 天（overdue-freeze-days）,"① 调用借阅/查询接口触发状态重算
+② 归还该书
+③ 查询读者状态","① 读者状态转为 FROZEN/受限
+② 归还成功，overdueDays 正确
+③ 归还后仍未自动解冻，须管理员调用 /api/admin/readers/{id}/unfreeze 才恢复",高,功能测试,关联需求 R005；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R006-01,图书借阅归还登记系统,R006 读者与图书管理,新增读者：证号重复被拒,已存在读者证号 1001；以 ADMIN 登录,① POST /api/admin/readers，cardNo=1001,"① HTTP 409，message=读者证号已注册
+② 读者表不新增记录",高,功能测试,关联需求 R006；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R006-02,图书借阅归还登记系统,R006 读者与图书管理,新增图书：条码重复被拒,已存在条码 BC-0001,① POST /api/admin/books，barcode=BC-0001,"① HTTP 409，message=图书条码已存在
+② 副本表不新增记录",高,功能测试,关联需求 R006；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R006-03,图书借阅归还登记系统,R006 读者与图书管理,注销仍有未还图书的读者,读者存在 BORROWED 状态借阅记录,① POST /api/admin/readers/{id}/deactivate,"① HTTP 409，message=仍有未归还图书，不可注销
+② 读者状态不变",高,功能测试,关联需求 R006；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R006-04,图书借阅归还登记系统,R006 读者与图书管理,下架已借出的图书,副本 BC-0002 状态为 BORROWED,① POST /api/admin/books/BC-0002/retire,"① HTTP 409，message=不存在或已借出的图书不可下架
+② 副本状态不变",中,功能测试,关联需求 R006；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R006-05,图书借阅归还登记系统,R006 读者与图书管理,非管理员访问管理接口,以 READER 角色登录,"① GET /api/admin/readers
+② POST /api/admin/books","① HTTP 403，错误码 ADMIN_REQUIRED
+② 写操作还须带 X-CSRF-Token，缺失时返回 403 INVALID_CSRF",高,功能测试,关联需求 R006；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R006-06,图书借阅归还登记系统,R006 读者与图书管理,借阅记录导出 CSV 正确性与注入防护,存在若干借阅记录，其中书名以 = 或 + 开头,"① GET /api/admin/borrow-records/export
+② 用 Excel 打开导出文件
+③ 检查以 = 开头的字段","① HTTP 200，Content-Type=text/csv
+② UTF-8 BOM 存在，Excel 中文不乱码
+③ 危险起始字符被前置单引号转义，导出后不会被 Excel 当作公式执行",高,功能测试,关联需求 R006；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R006-07,图书借阅归还登记系统,R006 读者与图书管理,写请求缺失或使用失效 CSRF 令牌,已登录；请求头不带 X-CSRF-Token，或携带切换身份前的旧令牌,"① POST /api/borrow，body 合法但不带 X-CSRF-Token
+② 用旧令牌重试
+③ 再发一次 GET /api/books","① HTTP 403，返回 INVALID_CSRF
+② 同样被拒
+③ GET 请求不受影响，正常返回 200（读操作不需 CSRF）",高,功能测试,关联需求 R006；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R006-08,图书借阅归还登记系统,R006 读者与图书管理,管理台读者列表不泄露口令摘要,以 ADMIN 登录，库中存在若干读者,"① GET /api/admin/readers
+② 检查返回对象的字段集合","① HTTP 200
+② 含读者状态、已借数量/借阅上限等字段；不包含 password_hash / password_md5 等口令摘要字段",高,功能测试,关联需求 R006；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R006-09,图书借阅归还登记系统,R006 读者与图书管理,管理员访问读者专属接口被拒,以 ADMIN 登录；/api/borrow_records/my 仅限 READER 角色使用,① GET /api/borrow_records/my,"① HTTP 403，错误码 READER_ONLY
+② 不返回任何借阅记录",中,功能测试,关联需求 R006；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R007-01,图书借阅归还登记系统,R007 借还操作日志,借阅/归还/续借写操作日志,依次完成一次借阅、一次归还、一次续借（续借需开启开关）,① GET /api/admin/logs,"① HTTP 200
+② 日志中依次存在 BORROW、RETURN、RENEW 三条记录，含操作人账号、读者 ID、ISBN、时间与摘要（含 barcode）",高,功能测试,关联需求 R007；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-R007-02,图书借阅归还登记系统,R007 借还操作日志,失败操作不产生成功日志,读者已达借阅上限,"① 发起一次必被拒绝的借阅
+② 查询操作日志","① HTTP 409
+② 日志中不存在对应的 BORROW 成功记录（避免“失败也留痕为成功”的误导）",中,功能测试,关联需求 R007；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-NFR01-01,图书借阅归还登记系统,NFR-01 借还响应时间,借还接口响应时间 ≤ 2 秒,数据库中有 1000 条借阅记录；服务在本机运行,"① 对 /api/borrow 与 /api/return 各连续执行 20 次
+② 统计每次耗时","① 全部请求 HTTP 200
+② P95 响应时间 ≤ 2000 ms，无超时（依据 NFR-01 的 2 秒上限）",高,性能测试,关联需求 NFR-01；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-NFR02-01,图书借阅归还登记系统,NFR-02 借还数据一致性,并发借同一副本只允许一次成功,副本 BC-0005 状态 AVAILABLE；准备 5 个不同读者并同时发起借阅,"① 并发向 /api/borrow 提交 5 个请求，barcode 均为 BC-0005
+② 查询副本状态与借阅记录","① 恰好 1 个请求返回 200，其余返回 409（BOOK_UNAVAILABLE 或唯一索引冲突）
+② 副本仅 1 条活动借阅记录，无双重借出；各读者 borrowed_count 与实际记录一致",高,并发测试,关联需求 NFR-02；详见 3-需求跟踪矩阵建立/测试用例文档.doc
+TC-NFR03-01,图书借阅归还登记系统,NFR-03 异常捕获与回滚,非法参数与异常的结构化处理,已登录,"① POST /api/borrow，body 缺 barcode 字段
+② POST /api/borrow，body 为空 {}","① HTTP 400，返回结构化错误信息（不由框架直接抛未处理异常）
+② 响应中不包含 Java 堆栈或内部类名，不产生任何数据库写入",高,功能测试,关联需求 NFR-03；详见 3-需求跟踪矩阵建立/测试用例文档.doc

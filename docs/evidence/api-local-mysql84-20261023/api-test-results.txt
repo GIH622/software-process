@@ -1,0 +1,19 @@
+接口层实测记录 —— 2026-10-23 18:58:46  目标 http://127.0.0.1:8081  (MySQL 8.4.4:3308 / library_dev)
+
+1.未登录访问 /api/books | 期望 401 AUTH_REQUIRED | 实际 401 AUTH_REQUIRED: 请先登录 | 通过
+2.读者1001登录 | 期望 200 | 实际 200 | 通过
+2b.管理员登录 | 期望 200 | 实际 200 | 通过
+3.借阅但缺 X-CSRF-Token | 期望 403 INVALID_CSRF | 实际 403 INVALID_CSRF: 会话安全令牌缺失或无效 | 通过
+4.借阅 BC-0001（三体） | 期望 200 BORROWED | 实际 200 status=BORROWED due=2026-11-22 | 通过
+5.归还 BC-0001（未逾期） | 期望 200 overdueDays=0 | 实际 200 overdueDays=0 status=RETURNED | 通过
+6.重复归还 BC-0001 | 期望 409 NOT_BORROWED | 实际 409 NOT_BORROWED: 该图书无未归还记录 | 通过
+7.借阅 BC-0003（格林童话） | 期望 200 | 实际 200 recordId=4 due=2026-11-22 | 通过
+8.R003 续借成功 | 期望 200 到期日+15天 | 实际 200 原=2026-11-22 续借后=2026-12-07 | 通过
+9.再次续借（超次数） | 期望 409 RENEWAL_LIMIT | 实际 409 RENEWAL_LIMIT: 已达到续借次数上限 | 通过
+10.检索“三体” | 期望 200 命中≥1 | 实际 200 命中=2 | 通过
+11.管理员逾期列表 | 期望 200 | 实际 200 逾期条数=0 | 通过
+12.CSV 导出（UTF-8 BOM） | 期望 200 且 BOM=yes | 实际 200 长度=282 BOM=yes | 通过
+13.管理员操作日志 | 期望 200 且条数≥3 | 实际 200 日志条数=4 | 通过
+14.读者1002 续借他人记录 | 期望 403 NOT_YOUR_LOAN | 实际 403 NOT_YOUR_LOAN: 读者只能操作自己的借阅记录 | 通过
+15.逾期记录续借 | 期望 409 RENEWAL_OVERDUE | 实际 409 RENEWAL_OVERDUE: 已逾期记录不能续借 | 通过
+16.逾期读者再借阅 | 期望 403 BORROW_RESTRICTED | 实际 403 BORROW_RESTRICTED: 读者当前不可借阅：RESTRICTED | 通过
